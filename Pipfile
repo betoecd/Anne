@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 tensorflow = "*"
 numpy = "*"
+notebook = "*"
+opencv-contrib-python = "*"
+scipy = "*"
 
 [dev-packages]
 
