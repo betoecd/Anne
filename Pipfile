@@ -9,6 +9,7 @@ numpy = "*"
 notebook = "*"
 opencv-contrib-python = "*"
 scipy = "*"
+matplotlib = "*"
 
 [dev-packages]
 
