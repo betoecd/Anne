@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter.constants import S
 from PIL import Image
 from PIL import ImageTk
 from tkinter import filedialog
@@ -43,40 +44,57 @@ class Interface(tk.Frame):
         fileMenu = tk.Menu(self)
         recentMenu = tk.Menu(self)
         
+        #Botao de Sair
         Exit1 = tk.Button(root, text="Sair", command=root.destroy)
         Exit1.pack(side='bottom')
 
+        
+        #Botao para Selecionar uma Imagem
         self.btn_selet_image = tk.Button(root, text="Select an image", command=self.select_image)
         self.btn_selet_image.place(x=50, y=10)
 
+        #Botao para Segmentacao
         self.btn_segmentation = tk.Button(root, text="Apply Segmentation", command=self.predict_image)
         self.btn_segmentation.place(x=400, y=10)
 
+        #Botao para escolher a marcara de referencia
         self.btn_mask_true = tk.Button(root, text="Select Mask", command=self.select_true_binary)
         self.btn_mask_true.place(x=50, y=326)
 
+        #Botao para analisar as diferencas entre a predicao e a mascara
         self.btn_diff_imgs = tk.Button(root, text="Differences", command=self.diff_imgs)
         self.btn_diff_imgs.place(x=400, y=326)
 
         #brightup = tk.Button(root, text="RotLeft", command="buttonpressed")
         #brightdown = tk.Button(root, text="RotLeft", command="buttonpressed")
 
+        #Paineis para Exibicao
+
+        #Painei Superior Esquerdo
         self.painelSupEqs = tk.Label(root)
         self.painelSupEqs.place(x=20, y=50)
-        #painelSupEqs.pack(side="left", padx=10, pady=10)
 
+        #Painei Superior Direito
         self.painelSupDir = tk.Label(root)
         self.painelSupDir.place(x=320, y=50)
-        #painelSupDir.pack(side="right", padx=10, pady=100)
 
+        #Painei Inferior Esquerdo 
         self.painelInfEqs = tk.Label(root)
         self.painelInfEqs.place(x=20, y=366)
 
+        #Painei Inferior Direito
         self.painelInfDir = tk.Label(root)
         self.painelInfDir.place(x=320, y=366)
 
         root.maxsize(600, 700) 
         root.resizable(False,False)
+        
+        self.OptionList = ["Test Prediction", 
+                           "Generate Shape", 
+                           "Compare Results", 
+                           "Generate a Binary Tif"] 
+
+
         menubar.add_cascade(label="File", menu=fileMenu)
         fileMenu.add_cascade(label="Draw", command=self.select_image)
         fileMenu.add_cascade(label="Choose Neural Network", command=self.select_image)
@@ -201,6 +219,23 @@ class Interface(tk.Frame):
             self.painelSupEqs.configure(image=image_tk)
             self.painelSupEqs.image = image_tk
 
+    def choose_opt(self, app):
+        self.variable = tk.StringVar(app)
+        self.variable.set(self.OptionList[0])
+        opt = tk.OptionMenu(app, self.variable, *self.OptionList)
+        opt.config(width=90, font=('Helvetica', 12))
+        opt.pack(side="top")
+
+        self.labelTest = tk.Label(text="", font=('Helvetica', 12), fg='red')
+        self.labelTest.pack(side="top")
+        self.variable.trace("w", self.callback_opt)
+    
+    def callback_opt(self, *args):
+        self.labelTest.configure(text="The selected item is {}".format(self.variable.get()))
+        #print(self.variable.get())
+        if(self.variable.get() == 'Compare Results'):
+            self.select_image()
+
  
 if __name__ == "__main__":
     root = tk.Tk()
@@ -208,5 +243,6 @@ if __name__ == "__main__":
     root.title('Semantic Segmetation Tools')  # window title is toolbox
     root.geometry("800x800+200+200")
     root.resizable(False,False)
+    Interface(root).choose_opt(root)
     #Interface(root).pack(fill="both", expand=False)
     root.mainloop()
