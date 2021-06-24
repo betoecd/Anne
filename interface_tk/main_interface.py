@@ -1,49 +1,33 @@
 import tkinter as tk
-from tkinter import messagebox as mbox
-import tkinter
+import shutil
+import numpy as np
+import os
+import pathlib
+import PIL
+import segmentation_models as sm
+import imgaug as ia
+import cv2
 
+from functools import partial
+from tkinter import messagebox as mbox
 from tkinter.constants import S
 from PIL import Image
 from PIL import ImageTk
 from tkinter import filedialog
-import PIL
-import cv2
-import numpy as np
 from osgeo import gdal,ogr,osr
-import shutil
-import segmentation_models as sm
-import imgaug as ia
 from keras_segmentation.predict import predict
 from keras.preprocessing import image
-import cv2
-from matplotlib import pyplot as plt
-from matplotlib import cm
-from skimage.transform import radon, rescale, rotate
-from skimage.morphology import (square, rectangle, diamond, disk, cube,
-                                octahedron, ball, octagon, star, binary_closing, closing, opening, skeletonize, erosion, dilation)
-from skimage.transform import probabilistic_hough_line
-from skimage.feature import canny
-from skimage.measure import label, regionprops, regionprops_table
-from skimage.io import imread, imsave
-import math
-import pandas as pd
-import numpy as np
-import glob
-import os
-import pathlib
-
-from sklearn.metrics import jaccard_score
-from skimage.morphology import (square, rectangle, diamond, disk, cube,
-                                octahedron, ball, octagon, star, binary_closing, closing, opening, skeletonize, erosion, dilation)
-from skimage.transform import rescale, resize, downscale_local_mean
-import time
-
 from tensorflow.python.keras.preprocessing.image import img_to_array
 
+from matplotlib import pyplot as plt
+from matplotlib import cm
+from sklearn.metrics import jaccard_score
+
 BACKBONE = 'vgg16'
-model = sm.Linknet(backbone_name=BACKBONE, encoder_weights='imagenet', encoder_freeze=True, classes=1, activation='sigmoid', weights = '../pericles_examples/jocival/vgg16_Linknet_Test28.hdf5')
+model = sm.Linknet(backbone_name=BACKBONE, encoder_weights='imagenet', encoder_freeze=True, classes=1, activation='sigmoid', weights = '../pericles_examples/jocival/vgg16_Linknet_Test24.hdf5')
 
 class Interface(tk.Frame):
+
     def __init__(self, root):
         tk.Frame.__init__(self, root)
         menubar = tk.Menu(self)
@@ -51,28 +35,22 @@ class Interface(tk.Frame):
         root.maxsize(400, 400) 
         root.resizable(False,False)
 
+        self.var = tk.IntVar()
         self.path_shp = ''
         self.old_choose = '' 
         self.OptionList = ["Test Neural Network", 
                            "Generate Shape from RGB Tif", 
                            "Generate Shape from Binary Tif", 
-                           "Generate a Binary Tif from RGB Tif"] 
+                           "Generate a Binary Tif from RGB Tif",
+                           "Compare Results"] 
 
         menubar.add_cascade(label="File", menu=fileMenu)
         fileMenu.add_cascade(label="Draw", command=self.select_image)
         fileMenu.add_cascade(label="Choose Neural Network", command=self.select_image)
 
-        #root.configure(menu=menubar)
-
-        #Botao de Sair
-        Exit1 = tk.Button(root, text="Sair", command=root.destroy)
-        Exit1.pack(side='bottom')
-
-        #root.geometry("800x800+200+200")
-
     def create_buttons(self):
         #Botao para Selecionar uma Imagem
-        root.maxsize(800, 800) 
+        root.maxsize(700, 700) 
 
         self.btn_selet_image = tk.Button(root, text="Select an image", command=self.select_image)
         self.btn_selet_image.place(x=50, y=10)
@@ -94,19 +72,19 @@ class Interface(tk.Frame):
 
         #Paineis para Exibicao
 
-        #Painei Superior Esquerdo
+        #Painel Superior Esquerdo
         self.painel_up_left = tk.Label(root)
         self.painel_up_left.place(x=20, y=50)
 
-        #Painei Superior Direito
+        #Painel Superior Direito
         self.painel_up_right = tk.Label(root)
         self.painel_up_right.place(x=320, y=50)
 
-        #Painei Inferior Esquerdo 
+        #Painel Inferior Esquerdo 
         self.painel_down_left = tk.Label(root)
         self.painel_down_left.place(x=20, y=366)
 
-        #Painei Inferior Direito
+        #Painel Inferior Direito
         self.painel_down_right = tk.Label(root)
         self.painel_down_right.place(x=320, y=366)
 
@@ -155,7 +133,7 @@ class Interface(tk.Frame):
         w.place(x=340, y=640)
 
         self.painel_down_right.configure(image=image_tk)
-        self.painel_down_right.image = image_tk,
+        self.painel_down_right.image = image_tk
 
     def iou(self, prediction, target):
 
@@ -206,10 +184,6 @@ class Interface(tk.Frame):
 
         self.variable.trace("w", self.callback_opt)
 
-        #Painei Inferior Esquerdo 
-        #self.painel_down_left = tk.Label(root)
-        #self.painel_down_left.place(x=20, y=366)
-    
     def callback_opt(self, *args):
 
         #self.labelTest.configure(text="The selected item is {}".format(self.variable.get()))
@@ -239,9 +213,32 @@ class Interface(tk.Frame):
             else:
                 mbox.showerror('Error', 'Nenhum Ortomosaico.tif foi Selecionado :')
                 tif_loaded = False
+
+        elif(self.variable.get() == 'Compare Results'):
+            root.maxsize(400, 400) 
+        
+            if self.load_tif():
+
+                button_right = tk.Button(root, text="Next")
+                button_right.place(x=5,y=10)
+                button_right.bind("<Button-1>", partial(self.button_click, key="0"))
+
+                button_left = tk.Button(root, text="Back")
+                button_left.place(x=220, y=10)
+                button_left.bind("<Button-1>", partial(self.button_click, key="1"))
+
+                self.f = {"Back":"0", "Next":"1"}
+                self.change_button = {}
+
+            else:
+                mbox.showerror('Error', 'Nenhum Ortomosaico.tif foi Selecionado :')
+                tif_loaded = False
                 
         self.old_choose = self.variable.get()
              
+    def button_click(self, event=None, key=None):
+        print(key)
+
     def load_tif(self):
 
         path_shp = filedialog.askopenfilename()
@@ -282,7 +279,7 @@ class Interface(tk.Frame):
         return tif_loaded
         
     def generate_binary_tif(self): 
-        mbox.showinfo("Information", "Geradondo Resultados: Isso pode demorar um pouco: ")
+        mbox.showinfo("Information", "Gerando Resultados: Isso pode demorar um pouco: ")
         iterator_x = 256
         iterator_y = 256
 
@@ -332,5 +329,7 @@ if __name__ == "__main__":
     root.title('Semantic Segmetation Tools')
     root.resizable(False,False)
     Interface(root).choose_opt(root)
-    root.geometry("800x800+200+200")
+    root.geometry("800x800+400+400")
+    Exit1 = tk.Button(root, text="Sair", command=root.destroy)
+    Exit1.pack(side='bottom')
     root.mainloop()
