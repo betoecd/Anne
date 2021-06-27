@@ -1,9 +1,11 @@
 import tkinter as tk
 import shutil
+from typing import Text
 import numpy as np
 import os
 import pathlib
 import PIL
+from numpy.lib.npyio import load
 import segmentation_models as sm
 import imgaug as ia
 import cv2
@@ -30,13 +32,25 @@ class Interface(tk.Frame):
 
     def __init__(self, root):
         tk.Frame.__init__(self, root)
+                
+        self.width_size = 600
+        self.hight_size = 600
+
         menubar = tk.Menu(self)
         fileMenu = tk.Menu(self)
-        root.maxsize(400, 400) 
+        root.maxsize(self.width_size, self.hight_size) 
         root.resizable(False,False)
 
+        self.x_crop = 0
+        self.y_crop = 0
+        self.iterator_x = 400
+        self.iterator_y = 300
+        self.background_percent = 0.8
+
+        self.f = {"Back":"0", "Next":"1"}
+        self.change_button = {}
+
         self.var = tk.IntVar()
-        self.path_shp = ''
         self.old_choose = '' 
         self.OptionList = ["Test Neural Network", 
                            "Generate Shape from RGB Tif", 
@@ -177,7 +191,7 @@ class Interface(tk.Frame):
 
         self.opt = tk.OptionMenu(app, self.variable, *self.OptionList)
         #opt.config(width=90, font=('Helvetica', 12))
-        self.opt.place(x=20, y=50)
+        self.opt.place(x=self.width_size*0.35, y=self.hight_size*0.05)
 
         self.labelTest = tk.Label(text="", font=('Helvetica', 12), fg='red')
         self.labelTest.pack(side="top")
@@ -197,8 +211,9 @@ class Interface(tk.Frame):
             self.create_buttons()
 
         elif(self.variable.get() == 'Generate Shape from RGB Tif'):
-            root.maxsize(400, 400) 
-            if self.load_tif():
+
+            root.maxsize(self.width_size, self.hight_size) 
+            if self.load_rgb_tif()[0]:
                 self.generate_binary_tif()
                 self.generate_shape()
 
@@ -207,29 +222,40 @@ class Interface(tk.Frame):
                 tif_loaded = False
         
         elif(self.variable.get() == 'Generate Shape from Binary Tif'):
-            root.maxsize(400, 400) 
-            if self.load_tif():
+            root.maxsize(self.width_size, self.hight_size) 
+            if self.load_rgb_tif()[0]:
                 self.generate_shape()
             else:
                 mbox.showerror('Error', 'Nenhum Ortomosaico.tif foi Selecionado :')
                 tif_loaded = False
 
         elif(self.variable.get() == 'Compare Results'):
-            root.maxsize(400, 400) 
-        
-            if self.load_tif():
+            root.maxsize(self.width_size, self.hight_size)
+            [unused, self.name_reference_binary, self.name_reference_neural] = self.load_shp(2)
+            #self.reference_binary = self.shp_to_bin(name_reference_binary)
+            self.name_tif = self.load_rgb_tif()
 
-                button_right = tk.Button(root, text="Next")
-                button_right.place(x=5,y=10)
-                button_right.bind("<Button-1>", partial(self.button_click, key="0"))
+            #self.reference_binary =
+            print('name_tif :', self.name_tif[1])
+            print('ref_binary :', self.name_reference_binary)
+            print('ref_neural', self.name_reference_neural)
+
+            self.reference_binary = gdal.Open(self.shp_to_bin(self.name_reference_binary, self.name_tif[1]))
+            self.reference_neural = gdal.Open(self.shp_to_bin(self.name_reference_neural, self.name_tif[1]))
+
+            print(self.reference_binary)
+            print(self.reference_neural)
+
+            if self.name_tif[0]:
 
                 button_left = tk.Button(root, text="Back")
-                button_left.place(x=220, y=10)
-                button_left.bind("<Button-1>", partial(self.button_click, key="1"))
+                button_left.place(x=self.width_size*0.04, y=self.hight_size*0.5)
+                button_left.bind("<Button-1>", partial(self.button_click, key="0"))
 
-                self.f = {"Back":"0", "Next":"1"}
-                self.change_button = {}
-
+                button_right = tk.Button(root, text="Next")
+                button_right.place(x=self.width_size*0.83, y=self.hight_size*0.5)
+                button_right.bind("<Button-1>", partial(self.button_click, key="1"))
+                
             else:
                 mbox.showerror('Error', 'Nenhum Ortomosaico.tif foi Selecionado :')
                 tif_loaded = False
@@ -237,15 +263,49 @@ class Interface(tk.Frame):
         self.old_choose = self.variable.get()
              
     def button_click(self, event=None, key=None):
-        print(key)
+        self.painel_center = tk.Label(root)
+        self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
 
-    def load_tif(self):
+        if (key == "1"):
 
-        path_shp = filedialog.askopenfilename()
-        if path_shp.endswith('tif'):
+            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
+                self.x_crop += self.iterator_x
 
-            self.mosaico = gdal.Open(path_shp)
-            print(path_shp)
+            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
+                self.x_crop =0
+                self.y_crop += self.iterator_y
+
+        elif (key == "0"):
+
+            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
+                self.x_crop -= self.iterator_x
+
+            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
+                self.x_crop =0
+                self.y_crop -= self.iterator_y
+
+        blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
+        #if (cv2.countNonZero(imgparcela) >= (self.iterator_x * self.iterator_y) * self.background_percent):
+        #    print(cv2.countNonZero(imgparcela))
+        img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        
+        img = PIL.Image.fromarray(imgparcela)
+        image_tk = ImageTk.PhotoImage(img)
+        self.painel_center.configure(image=image_tk)
+        self.painel_center.image=image_tk
+        ia.imshow(img_neural)
+        return key
+
+    def load_rgb_tif(self):
+
+        path_rgb_shp = filedialog.askopenfilename(title='Selecione O Mosaico')
+        if path_rgb_shp.endswith('tif'):
+
+            self.mosaico = gdal.Open(path_rgb_shp)
+            print(path_rgb_shp)
             self.red = self.mosaico.GetRasterBand(1)
             self.green = self.mosaico.GetRasterBand(2)
             self.blue = self.mosaico.GetRasterBand(3)
@@ -254,7 +314,7 @@ class Interface(tk.Frame):
             self.nx = self.mosaico.RasterXSize   
             self.ny = self.mosaico.RasterYSize
 
-            file_path = pathlib.Path(path_shp)
+            file_path = pathlib.Path(path_rgb_shp)
             self.out_file = pathlib.Path('/')
             self.out_file = file_path.parent/("out" + ".shp")
             path_temp = file_path.parent/'temp_files'
@@ -276,14 +336,66 @@ class Interface(tk.Frame):
             mbox.showerror('Error', 'Selecione um Arquivo .tif')
             tif_loaded = False
         
-        return tif_loaded
-        
+        return tif_loaded, path_rgb_shp
+
+    def load_shp(self, type_shape=0, option='Compare Results'):
+        """
+        Carrega o shp que sera utilido nas comparacoes
+        type : 0 - Representa o shape de referência, 
+               1 - Representa o shape da rede neural
+               2 - selecao do 2 shapes simultaneos
+        option : Refere-se ao tipo de operacao a ser executada
+        """
+        if option == 'Compare Results':
+            if type_shape == 0:
+                path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
+                path_reference_tif = self.load_rgb_tif()[1]
+
+                return path_reference_tif, path_reference_shp, None 
+
+            elif type_shape == 1:
+                path_neural_shp = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
+
+                return None, None, path_neural_shp 
+
+            elif type_shape == 2:
+                path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
+                #path_reference_tif = self.load_rgb_tif()[1]
+                path_neural_shp = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
+
+                return None, path_reference_shp, path_neural_shp
+
+        #if path_reference_shp.endswith('shp') and path_neural_shp.endswith('shp'):
+
+    def shp_to_bin(self, name_shp, name_tif, burn=255):
+
+        base_img = gdal.Open(name_tif, gdal.GA_ReadOnly)
+        base_shp = ogr.Open(name_shp)
+        base_shp_layer = base_shp.GetLayer()
+
+        #output_name = name_shp + '_out.tif
+        output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
+        output.SetProjection(base_img.GetProjectionRef())
+        output.SetGeoTransform(base_img.GetGeoTransform()) 
+
+        Band = output.GetRasterBand(1)
+        raster = gdal.RasterizeLayer(output, [1], base_shp_layer, burn_values=[burn])
+
+        #Band = None
+        output = None
+        base_img = None
+        base_shp = None
+
+        return name_shp + '_out.tif'
+
+
     def generate_binary_tif(self): 
         mbox.showinfo("Information", "Gerando Resultados: Isso pode demorar um pouco: ")
         iterator_x = 256
         iterator_y = 256
 
         for x in range(0, self.mosaico.RasterXSize, iterator_x):
+
             for y in range(0, self.mosaico.RasterYSize, iterator_y):
                     
                 if ((x+iterator_x)>self.mosaico.RasterXSize) or ((y+iterator_y)>self.mosaico.RasterYSize):
