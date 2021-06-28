@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pathlib
 import PIL
+from numpy.core.defchararray import title
 from numpy.lib.npyio import load
 import segmentation_models as sm
 import imgaug as ia
@@ -41,7 +42,7 @@ class Interface(tk.Frame):
         root.maxsize(self.width_size, self.hight_size) 
         root.resizable(False,False)
 
-        self.x_crop = 0
+        self.x_crop = 900
         self.y_crop = 0
         self.iterator_x = 400
         self.iterator_y = 300
@@ -127,7 +128,6 @@ class Interface(tk.Frame):
         pr = pr.astype('uint8')
 
         pr[pr == 1] = 255
-        self.img_pred = pr
         pr = PIL.Image.fromarray(pr)
         image_tk = ImageTk.PhotoImage(pr)
 
@@ -230,6 +230,7 @@ class Interface(tk.Frame):
                 tif_loaded = False
 
         elif(self.variable.get() == 'Compare Results'):
+
             root.maxsize(self.width_size, self.hight_size)
             [unused, self.name_reference_binary, self.name_reference_neural] = self.load_shp(2)
             #self.reference_binary = self.shp_to_bin(name_reference_binary)
@@ -288,16 +289,59 @@ class Interface(tk.Frame):
         greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
-        #if (cv2.countNonZero(imgparcela) >= (self.iterator_x * self.iterator_y) * self.background_percent):
-        #    print(cv2.countNonZero(imgparcela))
+
         img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        
+        img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        union, dif = self.diff_contourns(img_neural, img_binary)
+    
+        contours = self.find_contourns(union)
+        imgparcela = cv2.drawContours(imgparcela, contours, -1, (0, 255, 255), 3)
+
         img = PIL.Image.fromarray(imgparcela)
         image_tk = ImageTk.PhotoImage(img)
         self.painel_center.configure(image=image_tk)
         self.painel_center.image=image_tk
-        ia.imshow(img_neural)
+        #ia.imshow(imgparcela)
+        #print(dif)
+        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_dif.png', dif)
+        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_union.png', union)
+        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_img_neural.png', img_neural)
+        #cv2.imwrite(str(   self.x_crop) + str(self.y_crop) + '_img_bin.png', img_binary)
+        
         return key
+
+    def find_contourns(self, img):
+        
+        dots            = cv2.GaussianBlur(img, (21, 21), 0)
+        dots_cpy        = cv2.dilate(dots, None, iterations=1)
+        filter          = cv2.threshold(img, 200, 255, cv2.THRESH_BINARY)[1]
+        contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            
+        for idx, c in enumerate(contours):  # numbers the contours
+            x = int(sum(c[:,0,0]) / len(c))
+            y = int(sum(c[:,0,1]) / len(c))
+            print(c)
+
+        #ia.imshow(dots)
+        #ia.imshow(dots_cpy)
+
+        return contours
+        #cv2.waitKey()
+
+
+    def diff_contourns(self, img_neural, img_reference):
+
+        #img_neural = cv2.cvtColor(img_neural, cv2.COLOR_BGR2GRAY)
+        img_neural = cv2.threshold(img_neural, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+        #img_reference = cv2.cvtColor(img_reference, cv2.COLOR_BGR2GRAY)
+        img_reference = cv2.threshold(img_reference, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+        union = np.logical_or(img_reference, img_neural)
+        union = union.astype(np.uint8) * 255
+        dif = cv2.subtract(union, img_reference)
+
+        return union, dif
 
     def load_rgb_tif(self):
 
@@ -374,14 +418,14 @@ class Interface(tk.Frame):
         base_shp_layer = base_shp.GetLayer()
 
         #output_name = name_shp + '_out.tif
-        output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
+        output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte)
         output.SetProjection(base_img.GetProjectionRef())
         output.SetGeoTransform(base_img.GetGeoTransform()) 
 
         Band = output.GetRasterBand(1)
         raster = gdal.RasterizeLayer(output, [1], base_shp_layer, burn_values=[burn])
 
-        #Band = None
+        Band = None
         output = None
         base_img = None
         base_shp = None
