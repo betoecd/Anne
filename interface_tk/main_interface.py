@@ -59,6 +59,7 @@ class Interface(tk.Frame):
                            "Generate a Binary Tif from RGB Tif",
                            "Compare Results"] 
 
+        self.event2canvas = lambda e, c: (c.canvasx(e.x), c.canvasy(e.y))
         menubar.add_cascade(label="File", menu=fileMenu)
         fileMenu.add_cascade(label="Draw", command=self.select_image)
         fileMenu.add_cascade(label="Choose Neural Network", command=self.select_image)
@@ -266,6 +267,16 @@ class Interface(tk.Frame):
     def button_click(self, event=None, key=None):
         self.painel_center = tk.Label(root)
         self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
+         #setting up a tkinter canvas with scrollbars
+        
+        frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        xscroll = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
+        xscroll.grid(row=1, column=0, sticky=tk.E+tk.W)
+        yscroll = tk.Scrollbar(frame)
+        self.canvas = tk.Canvas(root, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+        #self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
 
         if (key == "1"):
 
@@ -288,25 +299,28 @@ class Interface(tk.Frame):
         blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
+        self.imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
 
         img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         union, dif = self.diff_contourns(img_neural, img_binary)
     
-        contours = self.find_contourns(dif)
-        imgparcela = cv2.drawContours(imgparcela, contours, -1, (255, 0, 0), 3)
+        self.contours = self.find_contourns(dif)
+        self.draw_false = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
+        
+        #mouseclick event
 
-        img = PIL.Image.fromarray(imgparcela)
+        img = PIL.Image.fromarray(self.draw_false)
         image_tk = ImageTk.PhotoImage(img)
+
+        self.canvas.create_image(0,0,image=image_tk,anchor="nw")
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
+        
         self.painel_center.configure(image=image_tk)
         self.painel_center.image=image_tk
-        #ia.imshow(imgparcela)
-        #print(dif)
-        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_dif.png', dif)
-        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_union.png', union)
-        #cv2.imwrite(str(self.x_crop) + str(self.y_crop) + '_img_neural.png', img_neural)
-        #cv2.imwrite(str(   self.x_crop) + str(self.y_crop) + '_img_bin.png', img_binary)
+        
+        self.painel_center.bind("<ButtonPress-1>",self.printcoords)
+        #self.painel_center.bind("<ButtonRelease-1>",self.printcoords)
         
         return key
 
@@ -317,18 +331,13 @@ class Interface(tk.Frame):
         dots_cpy        = cv2.dilate(dots, None, iterations=1)
         filter          = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
         contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-            
+        print(len(contours))    
         for idx, c in enumerate(contours):  # numbers the contours
-            x = int(sum(c[:,0,0]) / len(c))
-            y = int(sum(c[:,0,1]) / len(c))
-            print(c)
-
-        #ia.imshow(dots)
-        #ia.imshow(dots_cpy)
+            self.x_ctn = int(sum(c[:,0,0]) / len(c))
+            self.y_ctn = int(sum(c[:,0,1]) / len(c))
+            #print(' x :', x,' y :', y,' c :', c)
 
         return contours
-        #cv2.waitKey()
-
 
     def diff_contourns(self, img_neural, img_reference):
 
@@ -345,6 +354,23 @@ class Interface(tk.Frame):
         dif[dif > 100] = 255
 
         return union, dif
+
+    def printcoords(self, event):
+
+        print('click')
+        cx, cy = self.event2canvas(event, self.canvas)
+        print ("(%d, %d) / (%d, %d)" % (event.x,event.y,cx,cy))
+        for i in range(0, len(self.contours)):         
+            r = cv2.pointPolygonTest(self.contours[i], (cx, cy), False)
+            print(r)
+            if r > 0:
+                print("Selected contour ", i)   
+                pressionated_ctn = i
+                ctn = self.contours[i]
+        
+        self.imgparcela = cv2.drawContours(self.imgparcela, self.contours, -1, (0, 255, 0), 3)
+        return pressionated_ctn, ctn
+
 
     def load_rgb_tif(self):
 
@@ -450,8 +476,8 @@ class Interface(tk.Frame):
                 blueparcela = self.blue.ReadAsArray(x,y,iterator_x,iterator_y)
                 greenparcela = self.green.ReadAsArray(x,y,iterator_x,iterator_y)
                 redparcela = self.red.ReadAsArray(x,y,iterator_x,iterator_y)
-                imgparcela = cv2.merge((blueparcela,greenparcela,redparcela))
-                img = imgparcela / 255
+                self.imgparcela = cv2.merge((blueparcela,greenparcela,redparcela))
+                img = self.imgparcela / 255
 
                 pr = model.predict(np.array([img]))[0]
                 pr = pr[:,:, 0]
@@ -459,7 +485,7 @@ class Interface(tk.Frame):
                 pr[pr < 0.5] = 0
                 pr = pr.astype('uint8')
                 
-                if (imgparcela.max()>0) and (imgparcela.min()<255):
+                if (self.imgparcela.max()>0) and (self.imgparcela.min()<255):
                     write_image = pr
 
                 else:
