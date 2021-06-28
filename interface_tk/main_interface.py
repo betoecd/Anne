@@ -42,7 +42,7 @@ class Interface(tk.Frame):
         root.maxsize(self.width_size, self.hight_size) 
         root.resizable(False,False)
 
-        self.x_crop = 900
+        self.x_crop = 0
         self.y_crop = 0
         self.iterator_x = 400
         self.iterator_y = 300
@@ -294,8 +294,8 @@ class Interface(tk.Frame):
         img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         union, dif = self.diff_contourns(img_neural, img_binary)
     
-        contours = self.find_contourns(union)
-        imgparcela = cv2.drawContours(imgparcela, contours, -1, (0, 255, 255), 3)
+        contours = self.find_contourns(dif)
+        imgparcela = cv2.drawContours(imgparcela, contours, -1, (255, 0, 0), 3)
 
         img = PIL.Image.fromarray(imgparcela)
         image_tk = ImageTk.PhotoImage(img)
@@ -313,8 +313,9 @@ class Interface(tk.Frame):
     def find_contourns(self, img):
         
         dots            = cv2.GaussianBlur(img, (21, 21), 0)
+        #dots_cpy        = cv2.erode(dots, (3, 3))
         dots_cpy        = cv2.dilate(dots, None, iterations=1)
-        filter          = cv2.threshold(img, 200, 255, cv2.THRESH_BINARY)[1]
+        filter          = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
         contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             
         for idx, c in enumerate(contours):  # numbers the contours
@@ -331,15 +332,17 @@ class Interface(tk.Frame):
 
     def diff_contourns(self, img_neural, img_reference):
 
-        #img_neural = cv2.cvtColor(img_neural, cv2.COLOR_BGR2GRAY)
         img_neural = cv2.threshold(img_neural, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-
-        #img_reference = cv2.cvtColor(img_reference, cv2.COLOR_BGR2GRAY)
         img_reference = cv2.threshold(img_reference, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-        union = np.logical_or(img_reference, img_neural)
-        union = union.astype(np.uint8) * 255
-        dif = cv2.subtract(union, img_reference)
+        union = np.logical_or(img_neural, img_reference)
+        union = union.astype(np.uint8)*255
+        union[union < 128] = 0
+        union[union > 100] = 255
+
+        dif = cv2.subtract(union, img_neural)
+        dif[dif < 128] = 0
+        dif[dif > 100] = 255
 
         return union, dif
 
@@ -418,7 +421,7 @@ class Interface(tk.Frame):
         base_shp_layer = base_shp.GetLayer()
 
         #output_name = name_shp + '_out.tif
-        output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte)
+        output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
         output.SetProjection(base_img.GetProjectionRef())
         output.SetGeoTransform(base_img.GetGeoTransform()) 
 
@@ -431,7 +434,6 @@ class Interface(tk.Frame):
         base_shp = None
 
         return name_shp + '_out.tif'
-
 
     def generate_binary_tif(self): 
         mbox.showinfo("Information", "Gerando Resultados: Isso pode demorar um pouco: ")
