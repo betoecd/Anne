@@ -7,7 +7,7 @@ import pathlib
 import PIL
 from numpy.core.defchararray import title
 from numpy.lib.npyio import load
-import segmentation_models as sm
+
 import imgaug as ia
 import cv2
 
@@ -20,11 +20,15 @@ from tkinter import filedialog
 from osgeo import gdal,ogr,osr
 from keras_segmentation.predict import predict
 from keras.preprocessing import image
+from tensorflow.python.keras.backend import print_tensor
 from tensorflow.python.keras.preprocessing.image import img_to_array
 
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from sklearn.metrics import jaccard_score
+
+os.environ["SM_FRAMEWORK"] = "tf.keras" 
+import segmentation_models as sm
 
 BACKBONE = 'vgg16'
 model = sm.Linknet(backbone_name=BACKBONE, encoder_weights='imagenet', encoder_freeze=True, classes=1, activation='sigmoid', weights = '../pericles_examples/jocival/vgg16_Linknet_Test24.hdf5')
@@ -46,9 +50,11 @@ class Interface(tk.Frame):
         self.y_crop = 0
         self.iterator_x = 400
         self.iterator_y = 300
+        self.cnt_validator = []
         self.background_percent = 0.8
 
         self.f = {"Back":"0", "Next":"1"}
+        self.first_click = False
         self.change_button = {}
 
         self.var = tk.IntVar()
@@ -265,6 +271,8 @@ class Interface(tk.Frame):
         self.old_choose = self.variable.get()
              
     def button_click(self, event=None, key=None):
+        
+        self.cnt_validator = []
         self.painel_center = tk.Label(root)
         self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
          #setting up a tkinter canvas with scrollbars
@@ -279,7 +287,7 @@ class Interface(tk.Frame):
         #self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
 
         if (key == "1"):
-
+    
             if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
                 self.x_crop += self.iterator_x
 
@@ -306,29 +314,24 @@ class Interface(tk.Frame):
         union, dif = self.diff_contourns(img_neural, img_binary)
     
         self.contours = self.find_contourns(dif)
-        self.draw_false = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
+        self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
         
-        #mouseclick event
-
-        img = PIL.Image.fromarray(self.draw_false)
+        img = PIL.Image.fromarray(self.draw)
         image_tk = ImageTk.PhotoImage(img)
-
-        self.canvas.create_image(0,0,image=image_tk,anchor="nw")
-        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
         
         self.painel_center.configure(image=image_tk)
-        self.painel_center.image=image_tk
-        
+        self.painel_center.image=image_tk  
+
+        self.first_click = True      
         self.painel_center.bind("<ButtonPress-1>",self.printcoords)
-        #self.painel_center.bind("<ButtonRelease-1>",self.printcoords)
         
         return key
 
     def find_contourns(self, img):
         
         dots            = cv2.GaussianBlur(img, (21, 21), 0)
-        #dots_cpy        = cv2.erode(dots, (3, 3))
-        dots_cpy        = cv2.dilate(dots, None, iterations=1)
+        dots_cpy        = cv2.erode(dots, (3, 3))
+        #dots_cpy        = cv2.dilate(dots, None, iterations=1)
         filter          = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
         contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         print(len(contours))    
@@ -357,20 +360,40 @@ class Interface(tk.Frame):
 
     def printcoords(self, event):
 
-        print('click')
         cx, cy = self.event2canvas(event, self.canvas)
-        print ("(%d, %d) / (%d, %d)" % (event.x,event.y,cx,cy))
-        for i in range(0, len(self.contours)):         
-            r = cv2.pointPolygonTest(self.contours[i], (cx, cy), False)
-            print(r)
-            if r > 0:
-                print("Selected contour ", i)   
-                pressionated_ctn = i
-                ctn = self.contours[i]
-        
-        self.imgparcela = cv2.drawContours(self.imgparcela, self.contours, -1, (0, 255, 0), 3)
-        return pressionated_ctn, ctn
+        self.ctn = []
+        if self.first_click == True: 
 
+            for i in range(0, len(self.contours)):
+                self.cnt_validator.append(False)
+            
+            print("False")
+            self.first_click = False
+
+        for i in range(0, len(self.cnt_validator)):   
+            r = cv2.pointPolygonTest(self.contours[i], (cx, cy), False)
+            #print(r)
+            if r > 0:
+                self.cnt_validator[i] = (not self.cnt_validator[i])    
+                print("Selected contour ", i)   
+                self.ctn = self.contours[i]
+
+                if self.cnt_validator[i] == True:
+                    self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (0, 255, 0), 3)
+
+                else:
+                    self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (255, 0, 0), 3)
+
+        print('validator :', self.cnt_validator)
+
+        img = PIL.Image.fromarray(self.draw)
+        image_tk = ImageTk.PhotoImage(img)
+
+        self.canvas.create_image(0,0,image=image_tk,anchor="nw")
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
+        
+        self.painel_center.configure(image=image_tk)
+        self.painel_center.image=image_tk
 
     def load_rgb_tif(self):
 
