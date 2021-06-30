@@ -342,7 +342,7 @@ class Interface(tk.Frame):
 
         return contours
 
-    def diff_contourns(self, img_neural, img_reference):
+    def diff_contourns(self, img_reference, img_neural):
 
         img_neural = cv2.threshold(img_neural, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
         img_reference = cv2.threshold(img_reference, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
