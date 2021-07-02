@@ -26,7 +26,7 @@ import imgaug as ia
 import cv2
 
 from functools import partial
-from tkinter import BooleanVar, PhotoImage, messagebox as mbox
+from tkinter import BooleanVar, Event, PhotoImage, messagebox as mbox
 from tkinter.constants import S
 from PIL import Image
 from PIL import ImageTk
@@ -69,16 +69,22 @@ class Interface(tk.Frame):
         self.background_percent = 0.8
         #self.img_fit = np.zeros(400,400)
 
+        self.name_tif = ''
+        self.name_reference_binary = ''
+        self.name_reference_neural = ''
+
         self.f = {"Back":"0", "Next":"1"}
         self.first_click = False
         self.first_click_bool = False
+        self.ready_start = False
+
 
         self.change_button = {}
         self.bool_value = tk.StringVar() # Necessario ser como string para funcionar
         self.spn_box_1 = tk.StringVar()
         self.spn_box_2 = tk.StringVar()
         self.spn_box_3 = tk.StringVar()
-
+        self.btn_int = tk.IntVar()
 
         self.var = tk.IntVar()
         self.old_choose = '' 
@@ -108,11 +114,11 @@ class Interface(tk.Frame):
         self.style.map('.',background=
             [('selected', _compcolor), ('active',_ana2color)])
 
-        root.geometry("527x505+415+106")
+        root.geometry("527x505+400+200")
         root.minsize(1, 1)
         root.maxsize(1351, 738)
         root.resizable(1,  1)
-        root.title("New rootlevel")
+        root.title("Comparador de Contornos")
         root.configure(highlightcolor="black")
 
         self.TSeparator1 = ttk.Separator(root)
@@ -121,29 +127,32 @@ class Interface(tk.Frame):
         self.menubar = tk.Menu(root,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
         root.configure(menu = self.menubar)
 
-        self.Carregar_Shape = ttk.Button(root)
-        self.Carregar_Shape.place(relx=0.74, rely=0.659, height=28, width=123)
-        self.Carregar_Shape.configure(takefocus="")
-        self.Carregar_Shape.configure(text='''Tbutton''')
+        self.btn_load_mosaico = ttk.Button(root)
+        self.btn_load_mosaico.place(relx=0.74, rely=0.572, height=28, width=123)
+        self.btn_load_mosaico.configure(takefocus="")
+        self.btn_load_mosaico.configure(text='Mosaico')
+        self.btn_load_mosaico.bind('<Button-1>', partial(self.get_btn, key="0"))
 
-        self.TButton2 = ttk.Button(root)
-        self.TButton2.place(relx=0.74, rely=0.572, height=28, width=123)
-        self.TButton2.configure(takefocus="")
-        self.TButton2.configure(text='''Tbutton''')
+        self.btn_shape_reference = ttk.Button(root)
+        self.btn_shape_reference.place(relx=0.74, rely=0.659, height=28, width=123)
+        self.btn_shape_reference.configure(takefocus="")
+        self.btn_shape_reference.configure(text='Shape de Refer')
+        self.btn_shape_reference.bind('<Button-1>', partial(self.get_btn, key="1"))
 
-        self.TButton3 = ttk.Button(root)
-        self.TButton3.place(relx=0.74, rely=0.747, height=28, width=123)
-        self.TButton3.configure(takefocus="")
-        self.TButton3.configure(text='''Tbutton''')
+        self.btn_shape_neural = ttk.Button(root)
+        self.btn_shape_neural.place(relx=0.74, rely=0.747, height=28, width=123)
+        self.btn_shape_neural.configure(takefocus="")
+        self.btn_shape_neural.configure(text='Shape da Rede')
+        self.btn_shape_neural.bind('<Button-1>', partial(self.get_btn, key="2"))
 
-        self.TButton4 = ttk.Button(root)
-        self.TButton4.place(relx=0.742, rely=0.871, height=48, width=123)
-        self.TButton4.configure(takefocus="")
-        self.TButton4.configure(text='''Tbutton''')
+        self.btn_start = ttk.Button(root)
+        self.btn_start.place(relx=0.742, rely=0.871, height=48, width=123)
+        self.btn_start.configure(takefocus="")
+        self.btn_start.configure(text='Iniciar')
+        self.btn_start.bind('<Button-1>', partial(self.get_btn, key="5"))
 
         self.Spinbox1 = tk.Spinbox(root, from_=10.0, to=100.0, increment=10, textvariable=self.spn_box_1)
-        self.Spinbox1.place(relx=0.74, rely=0.178, relheight=0.046
-                , relwidth=0.243)
+        self.Spinbox1.place(relx=0.74, rely=0.178, relheight=0.046, relwidth=0.243)
         self.Spinbox1.configure(activebackground="#f9f9f9")
         self.Spinbox1.configure(background="white")
         self.Spinbox1.configure(font="TkDefaultFont")
@@ -152,7 +161,7 @@ class Interface(tk.Frame):
         self.Spinbox1.configure(selectforeground="white")
         self.Spinbox1.configure(command=self.get_values_spinbox)
 
-        self.Spinbox2 = tk.Spinbox(root, from_=100.0, to=500.0, increment=10, textvariable=self.spn_box_2)
+        self.Spinbox2 = tk.Spinbox(root, from_=100.0, to=500.0, increment=100, textvariable=self.spn_box_2)
         self.Spinbox2.place(relx=0.74, rely=0.271, relheight=0.046
                 , relwidth=0.243)
         self.Spinbox2.configure(activebackground="#f9f9f9")
@@ -163,10 +172,8 @@ class Interface(tk.Frame):
         self.Spinbox2.configure(selectforeground="white")
         self.Spinbox2.configure(command=self.get_values_spinbox)
 
-
         self.Spinbox3 = tk.Spinbox(root, from_=100.0, to=500.0, increment=100, textvariable=self.spn_box_3)
-        self.Spinbox3.place(relx=0.74, rely=0.364, relheight=0.046,
-                            relwidth=0.243)
+        self.Spinbox3.place(relx=0.74, rely=0.364, relheight=0.046, relwidth=0.243)
         self.Spinbox3.configure(activebackground="#f9f9f9")
         self.Spinbox3.configure(background="white")
         self.Spinbox3.configure(font="TkDefaultFont")
@@ -175,11 +182,10 @@ class Interface(tk.Frame):
         self.Spinbox3.configure(selectforeground="white")
         self.Spinbox3.configure(command=self.get_values_spinbox)
 
-
         self.Label1 = tk.Label(root)
         self.Label1.place(relx=0.015, rely=0.178, height=21, width=245)
         self.Label1.configure(activebackground="#f9f9f9")
-        self.Label1.configure(text='''Escolha a porcentagem de iteração :''')
+        self.Label1.configure(text='Escolha a porcentagem de iteração :')
 
         self.Radiobutton1 = tk.Radiobutton(root)
         self.Radiobutton1.place(relx=0.721, rely=0.455, relheight=0.046
@@ -211,6 +217,25 @@ class Interface(tk.Frame):
         self.Label7.place(relx=0.019, rely=0.74, height=38, width=221)
         self.Label7.configure(text='Selecionar shape da rede neural :')
 
+    def rm_btn(self):
+
+        self.TSeparator1.destroy()
+        self.btn_load_mosaico.destroy()
+        self.btn_shape_reference.destroy()
+        self.btn_shape_neural.destroy()
+        self.btn_start.destroy()
+        self.Spinbox1.destroy()
+        self.Spinbox2.destroy()                    
+        self.Spinbox3.destroy()                    
+        self.Label1.destroy()                      
+        self.Radiobutton1.destroy()   
+        self.Label2.destroy()
+        self.Label3.destroy()                      
+        self.Label4.destroy()
+        self.Label5.destroy()
+        self.Label6.destroy()
+        self.Label7.destroy()
+
     def get_text(self):  
         text_val = self.entry_text.get()
         
@@ -222,9 +247,9 @@ class Interface(tk.Frame):
     def get_values_spinbox(self):
 
         if self.first_click_bool == False:
-            values1 = self.Spinbox1.get()
-            values2 = self.Spinbox2.get()
-            values3 = self.Spinbox3.get()
+            self.iterator_recoil = float(int(self.Spinbox1.get())/100)
+            self.iterator_x = int(self.Spinbox2.get())
+            self.iterator_y = int(self.Spinbox3.get())
                     
         else:
             print('Sem alterar')
@@ -232,7 +257,7 @@ class Interface(tk.Frame):
             values2 = self.iterator_x
             values3 = self.iterator_y
 
-        print(values1, values2, values3)
+        print(self.iterator_recoil, self.iterator_x, self.iterator_y)
 
     def get_values_radio(self):
         self.first_click_bool = not (self.first_click_bool)
@@ -250,7 +275,51 @@ class Interface(tk.Frame):
             self.bool_value.set(bool_default)
         
         print(bool_default)
-    
+
+    def get_btn(self, event, key):
+        self.event_btn = key
+        #print(key)
+        if key=='0':
+            self.name_tif = self.load_shp(0)[0]
+
+        elif key=='1':
+            self.name_reference_binary = self.load_shp(1)[1]
+        
+        elif key=='2':
+            self.name_reference_neural = self.load_shp(2)[2]
+
+        if self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
+            print('no if')
+            root.geometry("800x600+400+100")
+            self.ready_start = True
+
+        #print(self.name_tif)
+        #print(self.name_reference_binary)
+        #print(self.name_reference_neural)
+        #print(key)
+        if self.ready_start:
+            self.rm_btn()
+            self.reference_binary = gdal.Open(self.shp_to_bin(self.name_reference_binary, self.name_tif))
+            self.reference_neural = gdal.Open(self.shp_to_bin(self.name_reference_neural, self.name_tif))
+            
+            self.dst_img = gdal.GetDriverByName('GTiff').Create(self.name_reference_binary + '_out.tif', self.reference_binary.RasterXSize, self.reference_binary.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
+            self.dst_img.SetProjection(self.reference_binary.GetProjectionRef())
+            self.dst_img.SetGeoTransform(self.reference_binary.GetGeoTransform()) 
+
+            print('start', self.reference_binary)
+            print('start', self.reference_neural)
+
+            button_left = tk.Button(root, text="Back")
+            button_left.place(relx=0.02, rely=0.4, height=48, width=100)
+            button_left.bind("<Button-1>", partial(self.button_click, key="0"))
+
+            button_right = tk.Button(root, text="Next")
+            button_right.place(relx=0.85, rely=0.4, height=48, width=100)
+            button_right.bind("<Button-1>", partial(self.button_click, key="1"))
+
+    def run(self):
+        self.start()
+            
     def create_buttons(self):
         #Botao para Selecionar uma Imagem
         root.maxsize(700, 700) 
@@ -270,11 +339,7 @@ class Interface(tk.Frame):
         self.btn_diff_imgs = tk.Button(root, text="Differences", command=self.diff_imgs)
         self.btn_diff_imgs.place(x=400, y=326)
 
-        #brightup = tk.Button(root, text="RotLeft", command="buttonpressed")
-        #brightdown = tk.Button(root, text="RotLeft", command="buttonpressed")
-
         #Paineis para Exibicao
-
         #Painel Superior Esquerdo
         self.painel_up_left = tk.Label(root)
         self.painel_up_left.place(x=20, y=50)
@@ -442,7 +507,7 @@ class Interface(tk.Frame):
                 button_left.bind("<Button-1>", partial(self.button_click, key="0"))
 
                 button_right = tk.Button(root, text="Next")
-                button_right.place(x=self.width_size*0.83, y=self.hight_size*0.5)
+                button_right.place(x=self.width_size*0.70, y=self.hight_size*0.5)
                 button_right.bind("<Button-1>", partial(self.button_click, key="1"))
                 
             else:
@@ -455,7 +520,8 @@ class Interface(tk.Frame):
         
         self.cnt_validator = []
         self.painel_center = tk.Label(root)
-        self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
+        self.painel_center.place(relx=0.185, rely=0.1, height=self.iterator_y, width=self.iterator_x)
+        #self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
          #setting up a tkinter canvas with scrollbars
         
         frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
@@ -491,8 +557,8 @@ class Interface(tk.Frame):
         self.imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
 
         img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        union, self.dif = self.diff_contourns(img_neural, img_binary)
+        self.img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
+        union, self.dif = self.diff_contourns(img_neural, self.img_binary)
     
         self.contours = self.find_contourns(self.dif)
         self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
@@ -506,7 +572,7 @@ class Interface(tk.Frame):
         self.first_click = True      
         self.painel_center.bind("<ButtonPress-1>",self.printcoords)
         
-        ia.imshow(self.img_fit)
+        #ia.imshow(self.img_fit)
 
         return key
 
@@ -566,7 +632,9 @@ class Interface(tk.Frame):
                 if self.cnt_validator[i] == True:
                     self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (0, 255, 0), 3)
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(255,255,255))
-                    self.reference_binary.GetRasterBand(1).WriteArray(self.img_fit, xoff=self.x_crop, yoff=self.y_crop)
+
+                    union_ref_checker = self.diff_contourns(self.img_binary, self.img_fit)[0]
+                    self.dst_img.GetRasterBand(1).WriteArray(union_ref_checker, xoff=self.x_crop, yoff=self.y_crop)
 
                 else:
                     self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (255, 0, 0), 3)
@@ -581,6 +649,17 @@ class Interface(tk.Frame):
         
         self.painel_center.configure(image=image_tk)
         self.painel_center.image=image_tk
+
+    def save_in_reference_tif(self):
+
+        if self.reference_neural.endswith('tif'):
+            self.red = self.mosaico.GetRasterBand(1)
+
+            self.dst_img = gdal.GetDriverByName('GTiff').Create(str(self.reference_neural), self.nx, self.ny, 1, gdal.GDT_Byte)
+            self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform())
+            self.srs = osr.SpatialReference()
+            self.srs.ImportFromWkt(self.mosaico.GetProjection())
+            self.dst_img.SetProjection(self.srs.ExportToWkt())
 
     def load_rgb_tif(self):
 
@@ -624,31 +703,42 @@ class Interface(tk.Frame):
     def load_shp(self, type_shape=0, option='Compare Results'):
         """
         Carrega o shp que sera utilido nas comparacoes
-        type : 0 - Representa o shape de referência, 
-               1 - Representa o shape da rede neural
-               2 - selecao do 2 shapes simultaneos
+        type : 0 - Carrega o Mosaico 
+               1 - Representa o shape de referencia
+               2 - Representa o shape da rede neural
         option : Refere-se ao tipo de operacao a ser executada
         """
         if option == 'Compare Results':
             if type_shape == 0:
-                path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
-                path_reference_tif = self.load_rgb_tif()[1]
 
-                return path_reference_tif, path_reference_shp, None 
+                path_reference_tif = self.load_rgb_tif()[1]
+                path_reference_shp = None
+                path_neural_shp    = None
+
+                print(path_reference_tif)
 
             elif type_shape == 1:
-                path_neural_shp = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
+                path_reference_tif = None
+                path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
+                path_neural_shp    = None
 
-                return None, None, path_neural_shp 
+                print(path_reference_shp)
+
 
             elif type_shape == 2:
+                path_reference_tif = None
+                path_reference_shp = None
+                path_neural_shp    = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
+
+                print(path_neural_shp)
+
+            elif type_shape == 3:
                 path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
-                #path_reference_tif = self.load_rgb_tif()[1]
-                path_neural_shp = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
+                path_reference_tif = None
+                path_neural_shp    = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
 
-                return None, path_reference_shp, path_neural_shp
+            return path_reference_tif, path_reference_shp, path_neural_shp
 
-        #if path_reference_shp.endswith('shp') and path_neural_shp.endswith('shp'):
 
     def shp_to_bin(self, name_shp, name_tif, burn=255):
 
@@ -723,8 +813,8 @@ if __name__ == "__main__":
     root.title('Semantic Segmetation Tools')
     root.resizable(False,False)
     #Interface(root).choose_opt(root)
-    Interface(root).start()
+    Interface(root).run()
     #root.geometry("800x800+400+400")
     Exit1 = tk.Button(root, text="Sair", command=root.destroy)
-    Exit1.place(relx=0.019, rely=0.871, height=48, width=123)
+    Exit1.place(relx=0.019, rely=0.871, height=48, width=100)
     root.mainloop()
