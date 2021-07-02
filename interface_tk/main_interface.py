@@ -1,4 +1,18 @@
-import tkinter as tk
+
+import sys
+
+try:
+    import Tkinter as tk
+except ImportError:
+    import tkinter as tk
+
+try:
+    import ttk
+    py3 = False
+except ImportError:
+    import tkinter.ttk as ttk
+    py3 = True
+    
 import shutil
 from typing import Text
 import numpy as np
@@ -12,7 +26,7 @@ import imgaug as ia
 import cv2
 
 from functools import partial
-from tkinter import messagebox as mbox
+from tkinter import BooleanVar, PhotoImage, messagebox as mbox
 from tkinter.constants import S
 from PIL import Image
 from PIL import ImageTk
@@ -38,7 +52,7 @@ class Interface(tk.Frame):
     def __init__(self, root):
         tk.Frame.__init__(self, root)
                 
-        self.width_size = 600
+        self.width_size = 800
         self.hight_size = 600
 
         menubar = tk.Menu(self)
@@ -48,14 +62,23 @@ class Interface(tk.Frame):
 
         self.x_crop = 0
         self.y_crop = 0
-        self.iterator_x = 400
-        self.iterator_y = 300
+        self.iterator_x = 500
+        self.iterator_y = 400
+        self.iterator_recoil = 0.8
         self.cnt_validator = []
         self.background_percent = 0.8
+        #self.img_fit = np.zeros(400,400)
 
         self.f = {"Back":"0", "Next":"1"}
         self.first_click = False
+        self.first_click_bool = False
+
         self.change_button = {}
+        self.bool_value = tk.StringVar() # Necessario ser como string para funcionar
+        self.spn_box_1 = tk.StringVar()
+        self.spn_box_2 = tk.StringVar()
+        self.spn_box_3 = tk.StringVar()
+
 
         self.var = tk.IntVar()
         self.old_choose = '' 
@@ -70,6 +93,164 @@ class Interface(tk.Frame):
         fileMenu.add_cascade(label="Draw", command=self.select_image)
         fileMenu.add_cascade(label="Choose Neural Network", command=self.select_image)
 
+    def start(self):
+        _bgcolor = '#d9d9d9'  # X11 color: 'gray85'
+        _fgcolor = '#000000'  # X11 color: 'black'
+        _compcolor = '#d9d9d9' # X11 color: 'gray85'
+        _ana1color = '#d9d9d9' # X11 color: 'gray85'
+        _ana2color = '#ececec' # Closest X11 color: 'gray92'
+        self.style = ttk.Style()
+        if sys.platform == "win32":
+            self.style.theme_use('winnative')
+        self.style.configure('.',background=_bgcolor)
+        self.style.configure('.',foreground=_fgcolor)
+        self.style.configure('.',font="TkDefaultFont")
+        self.style.map('.',background=
+            [('selected', _compcolor), ('active',_ana2color)])
+
+        root.geometry("527x505+415+106")
+        root.minsize(1, 1)
+        root.maxsize(1351, 738)
+        root.resizable(1,  1)
+        root.title("New rootlevel")
+        root.configure(highlightcolor="black")
+
+        self.TSeparator1 = ttk.Separator(root)
+        self.TSeparator1.place(relx=0.021, rely=0.535,  relwidth=0.962)
+
+        self.menubar = tk.Menu(root,font="TkMenuFont",bg=_bgcolor,fg=_fgcolor)
+        root.configure(menu = self.menubar)
+
+        self.Carregar_Shape = ttk.Button(root)
+        self.Carregar_Shape.place(relx=0.74, rely=0.659, height=28, width=123)
+        self.Carregar_Shape.configure(takefocus="")
+        self.Carregar_Shape.configure(text='''Tbutton''')
+
+        self.TButton2 = ttk.Button(root)
+        self.TButton2.place(relx=0.74, rely=0.572, height=28, width=123)
+        self.TButton2.configure(takefocus="")
+        self.TButton2.configure(text='''Tbutton''')
+
+        self.TButton3 = ttk.Button(root)
+        self.TButton3.place(relx=0.74, rely=0.747, height=28, width=123)
+        self.TButton3.configure(takefocus="")
+        self.TButton3.configure(text='''Tbutton''')
+
+        self.TButton4 = ttk.Button(root)
+        self.TButton4.place(relx=0.742, rely=0.871, height=48, width=123)
+        self.TButton4.configure(takefocus="")
+        self.TButton4.configure(text='''Tbutton''')
+
+        self.Spinbox1 = tk.Spinbox(root, from_=10.0, to=100.0, increment=10, textvariable=self.spn_box_1)
+        self.Spinbox1.place(relx=0.74, rely=0.178, relheight=0.046
+                , relwidth=0.243)
+        self.Spinbox1.configure(activebackground="#f9f9f9")
+        self.Spinbox1.configure(background="white")
+        self.Spinbox1.configure(font="TkDefaultFont")
+        self.Spinbox1.configure(highlightbackground="black")
+        self.Spinbox1.configure(selectbackground="blue")
+        self.Spinbox1.configure(selectforeground="white")
+        self.Spinbox1.configure(command=self.get_values_spinbox)
+
+        self.Spinbox2 = tk.Spinbox(root, from_=100.0, to=500.0, increment=10, textvariable=self.spn_box_2)
+        self.Spinbox2.place(relx=0.74, rely=0.271, relheight=0.046
+                , relwidth=0.243)
+        self.Spinbox2.configure(activebackground="#f9f9f9")
+        self.Spinbox2.configure(background="white")
+        self.Spinbox2.configure(font="TkDefaultFont")
+        self.Spinbox2.configure(highlightbackground="black")
+        self.Spinbox2.configure(selectbackground="blue")
+        self.Spinbox2.configure(selectforeground="white")
+        self.Spinbox2.configure(command=self.get_values_spinbox)
+
+
+        self.Spinbox3 = tk.Spinbox(root, from_=100.0, to=500.0, increment=100, textvariable=self.spn_box_3)
+        self.Spinbox3.place(relx=0.74, rely=0.364, relheight=0.046,
+                            relwidth=0.243)
+        self.Spinbox3.configure(activebackground="#f9f9f9")
+        self.Spinbox3.configure(background="white")
+        self.Spinbox3.configure(font="TkDefaultFont")
+        self.Spinbox3.configure(highlightbackground="black")
+        self.Spinbox3.configure(selectbackground="blue")
+        self.Spinbox3.configure(selectforeground="white")
+        self.Spinbox3.configure(command=self.get_values_spinbox)
+
+
+        self.Label1 = tk.Label(root)
+        self.Label1.place(relx=0.015, rely=0.178, height=21, width=245)
+        self.Label1.configure(activebackground="#f9f9f9")
+        self.Label1.configure(text='''Escolha a porcentagem de iteração :''')
+
+        self.Radiobutton1 = tk.Radiobutton(root)
+        self.Radiobutton1.place(relx=0.721, rely=0.455, relheight=0.046
+                , relwidth=0.132)
+        self.Radiobutton1.configure(justify='left')
+        self.Radiobutton1.configure(text='Padrão', value=True, variable=self.bool_value, command=self.get_values_radio,)
+
+        self.Label2 = tk.Label(root)
+        self.Label2.place(relx=0.021, rely=0.269, height=21, width=235)
+        self.Label2.configure(text='Valor do comprimento da imagem :')
+
+        self.Label3 = tk.Label(root)
+        self.Label3.place(relx=0.021, rely=0.36, height=21, width=186)
+        self.Label3.configure(text='Valor de altura da imagem :')
+
+        self.Label4 = tk.Label(root)
+        self.Label4.place(relx=0.014, rely=0.446, height=21, width=186)
+        self.Label4.configure(text='Usar configuração padrão :')
+
+        self.Label5 = tk.Label(root)
+        self.Label5.place(relx=0.023, rely=0.58, height=21, width=138)
+        self.Label5.configure(text='Selecionar Mosaico :')
+
+        self.Label6 = tk.Label(root)
+        self.Label6.place(relx=0.019, rely=0.66, height=21, width=213)
+        self.Label6.configure(text='Selecionar shape de referencia :')
+
+        self.Label7 = tk.Label(root)
+        self.Label7.place(relx=0.019, rely=0.74, height=38, width=221)
+        self.Label7.configure(text='Selecionar shape da rede neural :')
+
+    def get_text(self):  
+        text_val = self.entry_text.get()
+        
+        label_init = tk.Label(root, text=text_val)
+        self.canvas_init.create_window(200, 230, window=label_init)
+
+        print(text_val)
+
+    def get_values_spinbox(self):
+
+        if self.first_click_bool == False:
+            values1 = self.Spinbox1.get()
+            values2 = self.Spinbox2.get()
+            values3 = self.Spinbox3.get()
+                    
+        else:
+            print('Sem alterar')
+            values1 = self.iterator_recoil * 100
+            values2 = self.iterator_x
+            values3 = self.iterator_y
+
+        print(values1, values2, values3)
+
+    def get_values_radio(self):
+        self.first_click_bool = not (self.first_click_bool)
+        #print(self.bool_value.get())
+        
+        if self.first_click_bool:
+            bool_default = bool(self.bool_value.get())
+            self.spn_box_1.set('80')
+            self.spn_box_2.set('500')
+            self.spn_box_3.set('400')
+            #self.bool_value.set(bool_default)
+
+        else:
+            bool_default = False
+            self.bool_value.set(bool_default)
+        
+        print(bool_default)
+    
     def create_buttons(self):
         #Botao para Selecionar uma Imagem
         root.maxsize(700, 700) 
@@ -207,7 +388,7 @@ class Interface(tk.Frame):
 
     def callback_opt(self, *args):
 
-        #self.labelTest.configure(text="The selected item is {}".format(self.variable.get()))
+        #self.labelTest.configure(text="The selected item is {}".formatself.ctnf(self.variable.get()))
         if (self.old_choose == 'Test Neural Network' and self.variable.get() != 'Test Neural Network'):
             self.remove_buttons()
 
@@ -311,9 +492,9 @@ class Interface(tk.Frame):
 
         img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        union, dif = self.diff_contourns(img_neural, img_binary)
+        union, self.dif = self.diff_contourns(img_neural, img_binary)
     
-        self.contours = self.find_contourns(dif)
+        self.contours = self.find_contourns(self.dif)
         self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
         
         img = PIL.Image.fromarray(self.draw)
@@ -325,6 +506,8 @@ class Interface(tk.Frame):
         self.first_click = True      
         self.painel_center.bind("<ButtonPress-1>",self.printcoords)
         
+        ia.imshow(self.img_fit)
+
         return key
 
     def find_contourns(self, img):
@@ -335,6 +518,7 @@ class Interface(tk.Frame):
         filter          = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
         contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         print(len(contours))    
+
         for idx, c in enumerate(contours):  # numbers the contours
             self.x_ctn = int(sum(c[:,0,0]) / len(c))
             self.y_ctn = int(sum(c[:,0,1]) / len(c))
@@ -366,6 +550,7 @@ class Interface(tk.Frame):
 
             for i in range(0, len(self.contours)):
                 self.cnt_validator.append(False)
+                self.img_fit = cv2.fillPoly(self.dif, pts=self.contours, color=(0,0,0))
             
             print("False")
             self.first_click = False
@@ -380,12 +565,14 @@ class Interface(tk.Frame):
 
                 if self.cnt_validator[i] == True:
                     self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (0, 255, 0), 3)
+                    self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(255,255,255))
+                    self.reference_binary.GetRasterBand(1).WriteArray(self.img_fit, xoff=self.x_crop, yoff=self.y_crop)
 
                 else:
                     self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (255, 0, 0), 3)
+                    self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(0,0,0))
 
         print('validator :', self.cnt_validator)
-
         img = PIL.Image.fromarray(self.draw)
         image_tk = ImageTk.PhotoImage(img)
 
@@ -535,8 +722,9 @@ if __name__ == "__main__":
     Interface(root).pack(fill="both", expand=True)
     root.title('Semantic Segmetation Tools')
     root.resizable(False,False)
-    Interface(root).choose_opt(root)
-    root.geometry("800x800+400+400")
+    #Interface(root).choose_opt(root)
+    Interface(root).start()
+    #root.geometry("800x800+400+400")
     Exit1 = tk.Button(root, text="Sair", command=root.destroy)
-    Exit1.pack(side='bottom')
+    Exit1.place(relx=0.019, rely=0.871, height=48, width=123)
     root.mainloop()
