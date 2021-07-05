@@ -535,22 +535,44 @@ class Interface(tk.Frame):
 
         if (key == "1"):
     
-            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
-                self.x_crop += self.iterator_x
+            if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
+                self.x_crop += self.iterator_x * self.iterator_recoil
+                print('key 1 - if 0')
 
-            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
-                self.x_crop =0
-                self.y_crop += self.iterator_y
+                if self.x_crop + self.iterator_x > self.mosaico.RasterXSize:
+                    self.x_max = self.x_crop - self.iterator_x * self.iterator_recoil
+                    print('entrou')
+
+            if (self.x_crop + self.iterator_x > self.mosaico.RasterXSize):
+                self.x_crop = 0
+                self.y_crop += self.iterator_y * self.iterator_recoil
+                print('key 1 - if 1')
+
+
+            if (self.y_crop + self.iterator_y > self.mosaico.RasterYSize):
+                self.x_crop = self.x_crop
+                self.y_crop = self.y_crop
+                print('key 1 - if 2')
+                mbox.showinfo(title='Todo o Mosaico foi Percorrido!')
 
         elif (key == "0"):
 
-            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
-                self.x_crop -= self.iterator_x
+            if (self.x_crop - self.iterator_x < self.mosaico.RasterXSize):
+                self.x_crop -= self.iterator_x * self.iterator_recoil
+                print('key 0 - if 1')
 
-            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
+                if self.x_crop <= 0:    
+                    self.x_crop = self.x_max
+                    self.y_crop -= self.iterator_y * self.iterator_recoil
+                    print('key 0 - if 2')
+
+            if (self.y_crop - self.iterator_y > self.mosaico.RasterYSize):
                 self.x_crop =0
-                self.y_crop -= self.iterator_y
+                self.y_crop -= self.iterator_y * self.iterator_recoil
+                print('aqui2')
 
+
+        print(self.x_crop, self.y_crop)
         blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
@@ -579,9 +601,9 @@ class Interface(tk.Frame):
     def find_contourns(self, img):
         
         dots            = cv2.GaussianBlur(img, (21, 21), 0)
-        dots_cpy        = cv2.erode(dots, (3, 3))
-        #dots_cpy        = cv2.dilate(dots, None, iterations=1)
-        filter          = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
+        #dots_cpy        = cv2.erode(dots, (3, 3))
+        dots_cpy        = cv2.dilate(dots, None, iterations=3)
+        filter          = cv2.threshold(dots_cpy, 128, 255, cv2.THRESH_BINARY)[1]
         contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         print(len(contours))    
 
