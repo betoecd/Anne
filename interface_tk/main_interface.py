@@ -1,6 +1,8 @@
 
 import sys
 
+from tensorflow.keras.preprocessing import image
+
 try:
     import Tkinter as tk
 except ImportError:
@@ -19,33 +21,20 @@ import numpy as np
 import os
 import pathlib
 import PIL
-from numpy.core.defchararray import title
+from numpy.core.defchararray import asarray, title
 from numpy.lib.npyio import load
 
 import imgaug as ia
 import cv2
 
 from functools import partial
-from tkinter import BooleanVar, Event, PhotoImage, messagebox as mbox
-from tkinter.constants import S
+from tkinter import BooleanVar, Event, PhotoImage, Widget, messagebox as mbox
+from tkinter.constants import ROUND, S
 from PIL import Image
 from PIL import ImageTk
 from tkinter import filedialog
 from osgeo import gdal,ogr,osr
-from keras_segmentation.predict import predict
-from keras.preprocessing import image
-from tensorflow.python.keras.backend import print_tensor
-from tensorflow.python.keras.preprocessing.image import img_to_array
-
-from matplotlib import pyplot as plt
-from matplotlib import cm
-from sklearn.metrics import jaccard_score
-
-os.environ["SM_FRAMEWORK"] = "tf.keras" 
-import segmentation_models as sm
-
-BACKBONE = 'vgg16'
-model = sm.Linknet(backbone_name=BACKBONE, encoder_weights='imagenet', encoder_freeze=True, classes=1, activation='sigmoid', weights = '../pericles_examples/jocival/vgg16_Linknet_Test24.hdf5')
+from neural import NeuralFunctions as nf
 
 class Interface(tk.Frame):
 
@@ -67,6 +56,7 @@ class Interface(tk.Frame):
         self.iterator_recoil = 0.8
         self.cnt_validator = []
         self.background_percent = 0.8
+        self.array = []
         #self.img_fit = np.zeros(400,400)
 
         self.name_tif = ''
@@ -77,7 +67,6 @@ class Interface(tk.Frame):
         self.first_click = False
         self.first_click_bool = False
         self.ready_start = False
-
 
         self.change_button = {}
         self.bool_value = tk.StringVar() # Necessario ser como string para funcionar
@@ -288,17 +277,27 @@ class Interface(tk.Frame):
         elif key=='2':
             self.name_reference_neural = self.load_shp(2)[2]
 
-        if self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
+        elif self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
             print('no if')
             root.geometry("800x600+400+100")
             self.ready_start = True
 
-        #print(self.name_tif)
-        #print(self.name_reference_binary)
-        #print(self.name_reference_neural)
-        #print(key)
         if self.ready_start:
             self.rm_btn()
+            frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
+            xscroll = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
+            xscroll.grid(row=1, column=0, sticky=tk.E+tk.W)
+            yscroll = tk.Scrollbar(frame)
+            yscroll.grid(row=0, column=1, sticky=tk.N+tk.S)
+            self.canvas = tk.Canvas(frame, bd=0, width=self.iterator_x, height=self.iterator_y, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+            
+            #self.canvas = tk.Canvas(frame, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+            self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+            xscroll.config(command=self.canvas.xview)
+            yscroll.config(command=self.canvas.yview)
+            frame.pack(expand=1)
             self.reference_binary = gdal.Open(self.shp_to_bin(self.name_reference_binary, self.name_tif))
             self.reference_neural = gdal.Open(self.shp_to_bin(self.name_reference_neural, self.name_tif))
             
@@ -368,61 +367,6 @@ class Interface(tk.Frame):
         self.painel_down_left.destroy()
         self.painel_down_right.destroy()
 
-    def predict_image(self):
-        
-        img = image.load_img(self.path_rgb, target_size=(256,256))
-        img = image.img_to_array(img)
-        img = img / 255
-
-        pr = model.predict(np.array([img]))[0]
-        pr = pr[:,:, 0]
-        pr[pr >= 0.1] = 1
-        pr[pr < 0.5] = 0
-        pr = pr.astype('uint8')
-
-        pr[pr == 1] = 255
-        pr = PIL.Image.fromarray(pr)
-        image_tk = ImageTk.PhotoImage(pr)
-
-        self.painel_up_right.configure(image=image_tk)
-        self.painel_up_right.image = image_tk
-
-    def diff_imgs(self):
-
-        dif_img =  cv2.subtract(self.img_true, self.img_pred)
-        dif_img = PIL.Image.fromarray(dif_img)
-        image_tk = ImageTk.PhotoImage(dif_img)
-
-        pred = self.iou(self.img_true, self.img_pred)
-        pred = round(pred, 3)
-
-        w = tk.Label(root, text='Jaccard Index : ' +  str(pred))
-        w.place(x=340, y=640)
-
-        self.painel_down_right.configure(image=image_tk)
-        self.painel_down_right.image = image_tk
-
-    def iou(self, prediction, target):
-
-        intersection = np.logical_and(target, prediction)
-        union = np.logical_or(target, prediction)
-        iou_score = np.sum(intersection) / np.sum(union)
-        return iou_score
-
-    def select_true_binary(self):
-        
-        self.path_true = filedialog.askopenfilename()
-        if self.path_true:
-        
-            self.img_true = cv2.imread(self.path_true, cv2.COLOR_BGR2RGB)
-            self.img_true = cv2.resize(self.img_true, (256,256))
-
-            image = Image.fromarray(self.img_true)
-            image_tk = ImageTk.PhotoImage(image)
-
-            self.painel_down_left.configure(image=image_tk)
-            self.painel_down_left.image = image_tk
-
     def select_image(self):
 
         self.path_rgb = filedialog.askopenfilename()
@@ -453,7 +397,6 @@ class Interface(tk.Frame):
 
     def callback_opt(self, *args):
 
-        #self.labelTest.configure(text="The selected item is {}".formatself.ctnf(self.variable.get()))
         if (self.old_choose == 'Test Neural Network' and self.variable.get() != 'Test Neural Network'):
             self.remove_buttons()
 
@@ -517,22 +460,11 @@ class Interface(tk.Frame):
         self.old_choose = self.variable.get()
              
     def button_click(self, event=None, key=None):
-        
-        self.cnt_validator = []
-        self.painel_center = tk.Label(root)
-        self.painel_center.place(relx=0.185, rely=0.1, height=self.iterator_y, width=self.iterator_x)
-        #self.painel_center.place(x=self.width_size*0.15, y=self.hight_size*0.2)
-         #setting up a tkinter canvas with scrollbars
-        
-        frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-        xscroll = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
-        xscroll.grid(row=1, column=0, sticky=tk.E+tk.W)
-        yscroll = tk.Scrollbar(frame)
-        self.canvas = tk.Canvas(root, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
-        #self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
 
+        self.draw_img = PIL.Image.new("RGB",(self.iterator_x, self.iterator_y),(0,0,0))
+        self.draw_line = PIL.ImageDraw.Draw(self.draw_img)
+        self.cnt_validator = []
+        
         if (key == "1"):
     
             if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
@@ -580,56 +512,54 @@ class Interface(tk.Frame):
 
         img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         self.img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        union, self.dif = self.diff_contourns(img_neural, self.img_binary)
+        union, self.dif = nf.diff_contourns(self, img_neural, self.img_binary)
     
-        self.contours = self.find_contourns(self.dif)
+        self.contours = nf.find_contourns(self, self.dif)
         self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
         
         img = PIL.Image.fromarray(self.draw)
-        image_tk = ImageTk.PhotoImage(img)
+        self.image_tk = ImageTk.PhotoImage(img)
         
-        self.painel_center.configure(image=image_tk)
-        self.painel_center.image=image_tk  
+        #self.painel_center.configure(image=image_tk)
+        #self.painel_center.image=image_tk  
 
-        self.first_click = True      
-        self.painel_center.bind("<ButtonPress-1>",self.printcoords)
+        print(self.image_tk)
+        print('cliquei')
+        self.canvas.bind("<Button-1>",  self.get_x_and_y)
+        self.canvas.bind("<B1-Motion>", self.draw_smth)
+        self.array.clear()
+        self.first_click = True
+        self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.canvas.create_image(self.iterator_x // 2, self.iterator_y // 2, image=self.image_tk, anchor=tk.CENTER)
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
         
-        #ia.imshow(self.img_fit)
+    def get_x_and_y(self, event):
+        global lasx, lasy
+        lasx, lasy = event.x, event.y
+        self.array.append(lasx)
+        self.array.append(lasy)
+        print(self.array)
 
-        return key
+    def draw_smth(self, event):
+        global lasx, lasy
+        self.canvas.create_line((lasx, lasy, event.x, event.y), 
+                                fill='red', capstyle=tk.ROUND, 
+                                joinstyle=tk.ROUND, width=10,
+                                smooth=True, splinesteps=12,
+                                dash=(3,5))
+        '''                                             
+            self.canvas_draw = self.canvas.create_polygon((self.array, event.x, event.y), 
+                                                        fill='red', capstyle=tk.ROUND, 
+                                                        joinstyle=tk.ROUND, width=10,
+                                                        smooth=True, splinesteps=12,
+                                                        dash=(3,5))
+        '''
 
-    def find_contourns(self, img):
+        self.draw_line.line((lasx, lasy, event.x, event.y), (255,255,255), width=10)
+        lasx, lasy = event.x, event.y
+        self.save_draw_array = np.asarray(self.draw_img)
+
         
-        dots            = cv2.GaussianBlur(img, (21, 21), 0)
-        #dots_cpy        = cv2.erode(dots, (3, 3))
-        dots_cpy        = cv2.dilate(dots, None, iterations=3)
-        filter          = cv2.threshold(dots_cpy, 128, 255, cv2.THRESH_BINARY)[1]
-        contours, hier  = cv2.findContours(filter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        print(len(contours))    
-
-        for idx, c in enumerate(contours):  # numbers the contours
-            self.x_ctn = int(sum(c[:,0,0]) / len(c))
-            self.y_ctn = int(sum(c[:,0,1]) / len(c))
-            #print(' x :', x,' y :', y,' c :', c)
-
-        return contours
-
-    def diff_contourns(self, img_reference, img_neural):
-
-        img_neural = cv2.threshold(img_neural, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-        img_reference = cv2.threshold(img_reference, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-
-        union = np.logical_or(img_neural, img_reference)
-        union = union.astype(np.uint8)*255
-        union[union < 128] = 0
-        union[union > 100] = 255
-
-        dif = cv2.subtract(union, img_neural)
-        dif[dif < 128] = 0
-        dif[dif > 100] = 255
-
-        return union, dif
-
     def printcoords(self, event):
 
         cx, cy = self.event2canvas(event, self.canvas)
@@ -663,14 +593,12 @@ class Interface(tk.Frame):
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(0,0,0))
 
         print('validator :', self.cnt_validator)
+        print(self.draw)
         img = PIL.Image.fromarray(self.draw)
         image_tk = ImageTk.PhotoImage(img)
-
-        self.canvas.create_image(0,0,image=image_tk,anchor="nw")
-        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
-        
-        self.painel_center.configure(image=image_tk)
-        self.painel_center.image=image_tk
+        #self.canvas.destroy()
+        #self.canvas.pack(fill=tk.BOTH,expand=0)
+        #self.painel_center.image=image_tk
 
     def save_in_reference_tif(self):
 
@@ -761,7 +689,6 @@ class Interface(tk.Frame):
 
             return path_reference_tif, path_reference_shp, path_neural_shp
 
-
     def shp_to_bin(self, name_shp, name_tif, burn=255):
 
         base_img = gdal.Open(name_tif, gdal.GA_ReadOnly)
@@ -801,11 +728,7 @@ class Interface(tk.Frame):
                 self.imgparcela = cv2.merge((blueparcela,greenparcela,redparcela))
                 img = self.imgparcela / 255
 
-                pr = model.predict(np.array([img]))[0]
-                pr = pr[:,:, 0]
-                pr[pr >= 0.1] = 255
-                pr[pr < 0.5] = 0
-                pr = pr.astype('uint8')
+                pr = nf.predict_image(self, img)
                 
                 if (self.imgparcela.max()>0) and (self.imgparcela.min()<255):
                     write_image = pr
@@ -831,7 +754,7 @@ class Interface(tk.Frame):
 if __name__ == "__main__":
 
     root = tk.Tk()
-    Interface(root).pack(fill="both", expand=True)
+    Interface(root)#.pack(fill="both", expand=True)
     root.title('Semantic Segmetation Tools')
     root.resizable(False,False)
     #Interface(root).choose_opt(root)
