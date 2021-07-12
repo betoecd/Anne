@@ -54,7 +54,7 @@ class Interface(tk.Frame):
         self.iterator_recoil = 0.8
         self.cnt_validator = []
         self.background_percent = 0.8
-        self.array = []
+        self.array_clicks = []
         self.save_draw_array = None
         self.name_tif = ''
         self.name_reference_binary = ''
@@ -318,8 +318,6 @@ class Interface(tk.Frame):
         label_init = tk.Label(root, text=text_val)
         self.canvas_init.create_window(200, 230, window=label_init)
 
-        print(text_val)
-
     def get_current_value(self):
         self.slider_pencil = self.current_value.get()
         return '{: .2f}'.format(self.current_value.get())
@@ -335,16 +333,12 @@ class Interface(tk.Frame):
             self.iterator_y = int(self.Spinbox3.get())
                     
         else:
-            print('Sem alterar')
             values1 = self.iterator_recoil * 100
             values2 = self.iterator_x
             values3 = self.iterator_y
 
-        print(self.iterator_recoil, self.iterator_x, self.iterator_y)
-
     def get_values_radio(self):
         self.first_click_bool = not (self.first_click_bool)
-        #print(self.bool_value.get())
         
         if self.first_click_bool:
             bool_default = bool(self.bool_value.get())
@@ -357,11 +351,8 @@ class Interface(tk.Frame):
             bool_default = False
             self.bool_value.set(bool_default)
         
-        print(bool_default)
-
     def get_btn(self, event, key):
         self.event_btn = key
-        #print(key)
         if key=='0':
             self.name_tif = self.load_shp(0)[0]
 
@@ -372,7 +363,6 @@ class Interface(tk.Frame):
             self.name_reference_neural = self.load_shp(2)[2]
 
         elif self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
-            print('no if')
             root.geometry("800x600+400+100")
             self.ready_start = True
 
@@ -385,9 +375,6 @@ class Interface(tk.Frame):
             self.dst_img = gdal.GetDriverByName('GTiff').Create(self.name_reference_binary + '_out_2.tif', self.reference_binary.RasterXSize, self.reference_binary.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
             self.dst_img.SetProjection(self.reference_binary.GetProjectionRef())
             self.dst_img.SetGeoTransform(self.reference_binary.GetGeoTransform()) 
-
-            print('start', self.reference_binary)
-            print('start', self.reference_neural)
 
             button_left = tk.Button(root, text="Back")
             button_left.place(relx=0.02, rely=0.4, height=48, width=100)
@@ -497,7 +484,6 @@ class Interface(tk.Frame):
         if(self.variable.get() == 'Test Neural Network'):
             self.labelTest.destroy()
             self.opt.destroy()
-            print('removendo')
             self.create_buttons()
 
         elif(self.variable.get() == 'Generate Shape from RGB Tif'):
@@ -526,16 +512,8 @@ class Interface(tk.Frame):
             #self.reference_binary = self.shp_to_bin(name_reference_binary)
             self.name_tif = self.load_rgb_tif()
 
-            #self.reference_binary =
-            print('name_tif :', self.name_tif[1])
-            print('ref_binary :', self.name_reference_binary)
-            print('ref_neural', self.name_reference_neural)
-
             self.reference_binary = gdal.Open(self.shp_to_bin(self.name_reference_binary, self.name_tif[1]))
             self.reference_neural = gdal.Open(self.shp_to_bin(self.name_reference_neural, self.name_tif[1]))
-
-            print(self.reference_binary)
-            print(self.reference_neural)
 
             if self.name_tif[0]:
 
@@ -577,7 +555,6 @@ class Interface(tk.Frame):
         self.cnt_validator = []
         
         if (key == "1"):
-    
             if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
                 self.x_crop += self.iterator_x * self.iterator_recoil
                 print('key 1 - if 0')
@@ -598,8 +575,30 @@ class Interface(tk.Frame):
                 print('key 1 - if 2')
                 mbox.showinfo(title='Todo o Mosaico foi Percorrido!')
 
-        elif (key == "0"):
+            self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
+            while cv2.countNonZero(self.daninha_parcela) <= self.iterator_x*self.iterator_y*0.05:
+                if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
+                    self.x_crop += self.iterator_x * self.iterator_recoil
+                    print('key 1 - if 0')
 
+                    if self.x_crop + self.iterator_x > self.mosaico.RasterXSize:
+                        self.x_max = self.x_crop - self.iterator_x * self.iterator_recoil
+                        print('entrou')
+
+                if (self.x_crop + self.iterator_x > self.mosaico.RasterXSize):
+                    self.x_crop = 0
+                    self.y_crop += self.iterator_y * self.iterator_recoil
+                    print('key 1 - if 1')
+
+                if (self.y_crop + self.iterator_y > self.mosaico.RasterYSize):
+                    self.x_crop = self.x_crop
+                    self.y_crop = self.y_crop
+                    print('key 1 - if 2')
+                    mbox.showinfo(title='Todo o Mosaico foi Percorrido!')
+                    break
+                self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
+
+        elif (key == "0"):
             if (self.x_crop - self.iterator_x < self.mosaico.RasterXSize):
                 self.x_crop -= self.iterator_x * self.iterator_recoil
                 print('key 0 - if 1')
@@ -613,24 +612,28 @@ class Interface(tk.Frame):
                 self.x_crop =0
                 self.y_crop -= self.iterator_y * self.iterator_recoil
                 print('aqui2')
-
-
-        print(self.x_crop, self.y_crop)
-        self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
-        #while (cv2.countNonZero(self.daninha_parcela) == 0):  
-        '''
-        for self.x_crop in range(int(self.x_crop), int(self.mosaico.RasterXSize)-self.iterator_x, self.iterator_x):
             
             self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
-            if cv2.countNonZero(self.daninha_parcela) != 0:
-                break
+            while cv2.countNonZero(self.daninha_parcela) <= self.iterator_x*self.iterator_y*0.05:
+                if (self.x_crop - self.iterator_x < self.mosaico.RasterXSize):
+                    self.x_crop -= self.iterator_x * self.iterator_recoil
+                    print('key 0 - if 1')
 
-            for self.y_crop in range(int(self.y_crop), int(self.mosaico.RasterYSize)-self.iterator_y, self.iterator_y):            
-                print(cv2.countNonZero(self.daninha_parcela))          
-                #print('x = ', self.x_crop, 'y = ', self.y_crop)
-                #print(cv2.countNonZero(self.daninha_parcela))
-        '''
-        print(self.daninha_parcela)
+                    if self.x_crop <= 0:    
+                        self.x_crop = self.x_max
+                        self.y_crop -= self.iterator_y * self.iterator_recoil
+                        print('key 0 - if 2')
+
+                if (self.y_crop - self.iterator_y > self.mosaico.RasterYSize):
+                    self.x_crop =0
+                    self.y_crop -= self.iterator_y * self.iterator_recoil
+                    print('aqui2')
+                
+                self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
+        print('x :', self.x_crop,', y :', self.y_crop)
+        self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
+        #while (cv2.countNonZero(self.daninha_parcela) == 0):  
+                        
         blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
@@ -648,13 +651,7 @@ class Interface(tk.Frame):
 
         img = PIL.Image.fromarray(self.imgparcela)
         self.image_tk = ImageTk.PhotoImage(img)
-        #self.painel_center.configure(image=image_tk)
-        #self.painel_center.image=image_tk  
-
-        print(self.image_tk)
-        print('cliquei')
-
-        self.array.clear()
+        self.array_clicks.clear()
         self.first_click = True
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
         self.canvas.create_image(self.iterator_x // 2, self.iterator_y // 2, image=self.image_tk, anchor=tk.CENTER)
@@ -668,9 +665,8 @@ class Interface(tk.Frame):
     def get_x_and_y(self, event):
         global lasx, lasy
         lasx, lasy = event.x, event.y
-        self.array.append(lasx)
-        self.array.append(lasy)
-        #print(self.array)
+        self.array_clicks.append(lasx)
+        self.array_clicks.append(lasy)
 
     def draw_smth(self, event):
         global lasx, lasy
@@ -691,7 +687,6 @@ class Interface(tk.Frame):
         lasx, lasy = event.x, event.y
         self.save_draw_array = np.asarray(self.draw_img)
         self.save_draw_array = nf.prepare_array(self, self.save_draw_array)
-        print(self.save_draw_array)
         #self.save_draw_array = nf.prepare_array(self, self.save_draw_array)
         #ia.imshow(self.save_draw_array[0][0]) 
         self.dst_img.GetRasterBand(1).WriteArray(self.save_draw_array, xoff=self.x_crop, yoff=self.y_crop)
@@ -706,16 +701,13 @@ class Interface(tk.Frame):
             for i in range(0, len(self.contours)):
                 self.cnt_validator.append(False)
                 self.img_fit = cv2.fillPoly(self.dif, pts=self.contours, color=(0,0,0))
-            
-            print("False")
+
             self.first_click = False
 
         for i in range(0, len(self.cnt_validator)):   
             r = cv2.pointPolygonTest(self.contours[i], (cx, cy), False)
-            #print(r)
             if r > 0:
                 self.cnt_validator[i] = (not self.cnt_validator[i])    
-                print("Selected contour ", i)   
                 self.ctn = self.contours[i]
 
                 if self.cnt_validator[i] == True:
@@ -729,8 +721,6 @@ class Interface(tk.Frame):
                     self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (255, 0, 0), 3)
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(0,0,0))
 
-        print('validator :', self.cnt_validator)
-        print(self.draw)
         img = PIL.Image.fromarray(self.draw)
         image_tk = ImageTk.PhotoImage(img)
         #self.canvas.destroy()
@@ -754,7 +744,6 @@ class Interface(tk.Frame):
         if path_rgb_shp.endswith('tif'):
 
             self.mosaico = gdal.Open(path_rgb_shp)
-            print(path_rgb_shp)
             self.red = self.mosaico.GetRasterBand(1)
             self.green = self.mosaico.GetRasterBand(2)
             self.blue = self.mosaico.GetRasterBand(3)
@@ -802,22 +791,15 @@ class Interface(tk.Frame):
                 path_reference_shp = None
                 path_neural_shp    = None
 
-                print(path_reference_tif)
-
             elif type_shape == 1:
                 path_reference_tif = None
                 path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
                 path_neural_shp    = None
 
-                print(path_reference_shp)
-
-
             elif type_shape == 2:
                 path_reference_tif = None
                 path_reference_shp = None
                 path_neural_shp    = filedialog.askopenfilename(title='Selecione o Shape da Rede Neural :')
-
-                print(path_neural_shp)
 
             elif type_shape == 3:
                 path_reference_shp = filedialog.askopenfilename(title='Selecione o Shape de Referência :')
@@ -889,10 +871,9 @@ class Interface(tk.Frame):
         mbox.showinfo("Information", "Shape Gerado com Sucesso!: ")
 
     def destroy_aplication(self):
-        print(self.x_crop, self.y_crop)
         string_text = 'x_' + str(self.x_crop) + '_y_' + str(self.y_crop) + '_name_' + str(self.name_tif)
         with open("log_progress.txt", "ab") as f:
-            	f.write(string_text.encode('utf-8', 'ignore'))
+            f.write(string_text.encode('utf-8', 'ignore'))
         root.destroy()
 
 if __name__ == "__main__":
