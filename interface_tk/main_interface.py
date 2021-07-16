@@ -2,7 +2,7 @@
 import sys
 from numpy.core.numeric import count_nonzero
 
-from tensorflow.keras.preprocessing import image
+#from tensorflow.keras.preprocessing import image
 
 try:
     import Tkinter as tk
@@ -282,6 +282,55 @@ class Interface(tk.Frame):
         #self.TButton3.configure(takefocus="")
         #self.TButton3.configure(text='3')
 
+    def labelling_menu(self):
+    
+        print('Aqui')
+        self.Label1.destroy()
+        self.opt.destroy()
+
+        self.Label1 = tk.Label(root)
+        self.Label1.place(relx=0.115, rely=0.572, height=21, width=245)
+        self.Label1.configure(activebackground="#f9f9f9")
+        self.Label1.configure(text='Escolha a porcentagem de iteração :')
+
+        self.btn_load_mosaico = tk.Button(root)
+        self.btn_load_mosaico.place(relx=0.72, rely=0.572, height=28, width=123)
+        self.btn_load_mosaico.configure(takefocus="")
+        self.btn_load_mosaico.configure(text='Mosaico')
+        self.btn_load_mosaico.bind('<Button-1>', partial(self.get_btn, key="0"))
+
+        self.Label2 = tk.Label(root)
+        self.Label2.place(relx=0.11, rely=0.659, height=21, width=200)
+        self.Label2.configure(activebackground="#f9f9f9")
+        self.Label2.configure(text='Selecione o Shape de Base :')
+
+        self.btn_shape_reference = tk.Button(root)
+        self.btn_shape_reference.place(relx=0.72, rely=0.659, height=28, width=123)
+        self.btn_shape_reference.configure(takefocus="")
+        self.btn_shape_reference.configure(text='Shape de Base')
+        self.btn_shape_reference.bind('<Button-1>', partial(self.get_btn, key="3"))
+
+        self.Label3 = tk.Label(root)
+        self.Label3.place(relx=0.117, rely=0.746, height=21, width=260)
+        self.Label3.configure(activebackground="#f9f9f9")
+        self.Label3.configure(text='Porcentagem de fundo preto permitida:')
+
+        self.Spinbox_backg = tk.Spinbox(root, from_=5.0, to=100.0, increment=5, textvariable=self.spn_box_1)
+        self.Spinbox_backg.place(relx=0.63, rely=0.746, relheight=0.046, relwidth=0.243)
+        self.Spinbox_backg.configure(activebackground="#f9f9f9")
+        self.Spinbox_backg.configure(background="white")
+        self.Spinbox_backg.configure(font="TkDefaultFont")
+        self.Spinbox_backg.configure(highlightbackground="black")
+        self.Spinbox_backg.configure(selectbackground="blue")
+        self.Spinbox_backg.configure(selectforeground="white")
+        self.Spinbox_backg.configure(command= partial(self.get_values_spinbox, type='Draw Weeds'))
+
+        self.btn_start = tk.Button(root)
+        self.btn_start.place(relx=0.742, rely=0.871, height=48, width=123)
+        self.btn_start.configure(takefocus="")
+        self.btn_start.configure(text='Iniciar')
+        self.btn_start.bind('<Button-1>', partial(self.get_btn, key="5"))
+
     def first_menu(self, app):
 
         self.logo = PhotoImage(file = r"images/Logo-Escuro.png")
@@ -311,6 +360,51 @@ class Interface(tk.Frame):
 
         self.variable.trace("w", self.callback_opt)
 
+    def remove_buttons(self, option='First Menu'):
+
+        if option == 'Test Neural Network':
+            self.btn_selet_image.destroy()
+            self.btn_segmentation.destroy()
+            self.btn_mask_true.destroy()
+            self.btn_diff_imgs.destroy()
+
+            self.painel_up_left.destroy()
+            self.painel_up_right.destroy()
+            self.painel_down_left.destroy()
+            self.painel_down_right.destroy()
+
+        elif option == 'Compare Results':
+            self.TSeparator1.destroy()
+            self.btn_load_mosaico.destroy()
+            self.btn_shape_reference.destroy()
+            self.btn_shape_neural.destroy()
+            self.btn_start.destroy()
+            self.Spinbox1.destroy()
+            self.Spinbox2.destroy()                    
+            self.Spinbox3.destroy()                    
+            self.Label1.destroy()                      
+            self.Radiobutton1.destroy()   
+            self.Label2.destroy()
+            self.Label3.destroy()                      
+            self.Label4.destroy()
+            self.Label5.destroy()
+            self.Label6.destroy()
+            self.Label7.destroy()
+
+        elif option == 'Draw Menu':
+            self.Label2.destroy()
+            self.btn_shape_reference.destroy()
+            self.Label3.destroy()
+            self.Spinbox_backg.destroy()
+            self.btn_start.destroy()
+
+        else:
+            
+            self.Canvas1.destroy()
+            self.Label1.destroy()
+
+            self.opt.destroy()
+            self.labelTest.destroy()
 
     def get_text(self):  
         text_val = self.entry_text.get()
@@ -325,12 +419,18 @@ class Interface(tk.Frame):
     def slider_changed(self, event):
         self.value_label.configure(text=self.get_current_value())
 
-    def get_values_spinbox(self):
+    def get_values_spinbox(self, type=''):
 
-        if self.first_click_bool == False:
-            self.iterator_recoil = float(int(self.Spinbox1.get())/100)
-            self.iterator_x = int(self.Spinbox2.get())
-            self.iterator_y = int(self.Spinbox3.get())
+        if type == 'Compare Results':
+
+            if self.first_click_bool == False:
+                self.iterator_recoil = float(int(self.Spinbox1.get())/100)
+                self.iterator_x = int(self.Spinbox2.get())
+                self.iterator_y = int(self.Spinbox3.get())
+                
+        elif type == 'Draw Weeds':
+            self.background_percent = float(1-int(self.Spinbox_backg.get())/100)
+            print(self.background_percent)
                     
         else:
             values1 = self.iterator_recoil * 100
@@ -362,9 +462,28 @@ class Interface(tk.Frame):
         elif key=='2':
             self.name_reference_neural = self.load_shp(2)[2]
 
+        elif key=='3':
+            self.name_reference_binary = self.load_shp(1)[1]
+
         elif self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
             root.geometry("800x600+400+100")
             self.ready_start = True
+
+        if self.name_tif != '' and self.name_reference_binary != '' and key=='5':
+            self.remove_buttons('Draw Menu')
+            self.reference_binary = self.shp_to_bin( self.name_reference_binary, self.name_tif)
+            self.daninha_1 = gdal.Open(self.reference_binary)
+            self.daninha_band_1 =  self.daninha_1.GetRasterBand(1)
+            self.labelling_start()
+            self.remove_buttons('Fisrt Menu')
+
+            self.dst_img = gdal.GetDriverByName('GTiff').Create('resutado_gerado.tif', self.mosaico.RasterXSize, self.mosaico.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
+            self.dst_img.SetProjection(self.mosaico.GetProjectionRef())
+            self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform()) 
+
+            self.button_right.bind("<Button-1>", partial(self.button_click, key="1"))
+            self.button_left.bind("<Button-1>", partial(self.button_click, key="0"))
+
 
         if self.ready_start:
             self.rm_btn()
@@ -454,6 +573,13 @@ class Interface(tk.Frame):
             self.Label6.destroy()
             self.Label7.destroy()
 
+        elif option == 'Draw Menu':
+            self.Label2.destroy()
+            self.btn_shape_reference.destroy()
+            self.Label3.destroy()
+            self.Spinbox_backg.destroy()
+            self.btn_start.destroy()
+
         else:
             
             self.Canvas1.destroy()
@@ -530,7 +656,8 @@ class Interface(tk.Frame):
                 tif_loaded = False
         
         elif(self.variable.get() == 'Draw Weeds'):
-            self.name_tif = self.load_rgb_tif()
+            self.labelling_menu()
+            '''
             self.daninha_1 = gdal.Open('base.shp_out.tif')
             self.daninha_band_1 =  self.daninha_1.GetRasterBand(1)
             if self.name_tif[0]:
@@ -544,7 +671,7 @@ class Interface(tk.Frame):
 
                 self.button_right.bind("<Button-1>", partial(self.button_click, key="1"))
                 self.button_left.bind("<Button-1>", partial(self.button_click, key="0"))
-
+            '''
 
         self.old_choose = self.variable.get()
              
