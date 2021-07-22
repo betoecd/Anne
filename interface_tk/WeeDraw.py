@@ -45,6 +45,7 @@ class Interface(tk.Frame):
         self.bool_draw = False
         self.path_save_img_rgb = 'dataset/rgb'
         self.path_save_img_bin = 'dataset/binario'
+        self.directory_saved = ''
         root.maxsize(self.width_size, self.hight_size) 
         root.resizable(False,False)
 
@@ -67,7 +68,6 @@ class Interface(tk.Frame):
         self.OptionList = ["Efetuar Marcacoes"] 
 
         img = ImageTk.PhotoImage(file='icons/icone_sensix.png')
-        #print(img)
         root.call('wm', 'iconphoto', root._w, img)
 
         self.event2canvas = lambda e, c: (c.canvasx(e.x), c.canvasy(e.y ))
@@ -534,17 +534,27 @@ class Interface(tk.Frame):
 
         if self.name_tif != '' and self.name_reference_binary != '' and key=='5':
             #self.remove_buttons('Draw Menu')
-            self.reference_binary = self.shp_to_bin( self.name_reference_binary, self.name_tif)
+            self.reference_binary = self.shp_to_bin(self.name_reference_binary, self.name_tif)
             self.daninha_1 = gdal.Open(self.reference_binary)
             self.daninha_band_1 =  self.daninha_1.GetRasterBand(1)
             self.remove_buttons('Fisrt Menu')
             self.labelling_start()
             self.remove_buttons('Draw Menu')
 
+            if(self.load_progress()):
+                print('Passei')
+                if(str(self.directory_saved) == str((self.name_tif))):
+                    print('deus')
+                    mbox.showinfo('Information','O Progresso Anterior foi Carregado!')
+
+                else:
+                    self.x_crop = 0.0
+                    self.y_crop = 0.0
+                    
             self.dst_img = gdal.GetDriverByName('GTiff').Create('resutado_gerado.tif', self.mosaico.RasterXSize, self.mosaico.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
             self.dst_img.SetProjection(self.mosaico.GetProjectionRef())
             self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform()) 
-
+            
             self.button_right.bind("<Button-1>", partial(self.button_click, key="1"))
             self.button_left.bind("<Button-1>", partial(self.button_click, key="0"))
 
@@ -888,9 +898,6 @@ class Interface(tk.Frame):
 
         img = PIL.Image.fromarray(self.draw)
         image_tk = ImageTk.PhotoImage(img)
-        #self.canvas.destroy()
-        #self.canvas.pack(fill=tk.BOTH,expand=0)
-        #self.painel_center.image=image_tk
 
     def save_in_reference_tif(self):
 
@@ -1036,8 +1043,30 @@ class Interface(tk.Frame):
         dst_ds.Destroy()
         mbox.showinfo("Information", "Shape Gerado com Sucesso!: ")
 
+    def load_progress(self):
+
+        try:   
+            f = open('log_progress.txt', 'r')
+            for lines in f:
+                pass
+
+            values = lines.split(',')
+            self.x_crop = float(values[0])
+            self.y_crop = float(values[1])
+            self.directory_saved = values[2]
+            print('x', self.x_crop, 'y', self.y_crop, 'dir:', self.directory_saved)
+            bool_check_dir = True
+            f.close()
+
+        except:
+            print('Nao abriu')
+            bool_check_dir = False
+
+        return(bool_check_dir)
+
+
     def destroy_aplication(self):
-        string_text = 'x_' + str(self.x_crop) + '_y_' + str(self.y_crop) + '_name_' + str(self.name_tif)
+        string_text = str(self.x_crop) + ',' + str(self.y_crop) + ',' + str(self.name_tif) + ', \n'
         with open("log_progress.txt", "ab") as f:
             f.write(string_text.encode('utf-8', 'ignore'))
         root.destroy()
