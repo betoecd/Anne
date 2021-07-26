@@ -6,7 +6,6 @@ import cv2
 import sys
 import tkinter as tk
 import shutil
-import imgaug as iaa
 from typing import Text
 from functools import partial
 from tkinter import PhotoImage, messagebox as mbox
@@ -29,9 +28,12 @@ class Interface(tk.Frame):
         self.y_crop = 0
         self.iterator_x = 256
         self.iterator_y = 256
+        self.screen_width = 512
+        self.screen_height = 512
+
         self.iterator_recoil = 0.8
-        self.cnt_validator = []
         self.background_percent = 0.8
+        self.cnt_validator = []
         self.array_clicks = []
         self.draw_lines_array = [[]]
         self.save_draw_array = None
@@ -241,7 +243,7 @@ class Interface(tk.Frame):
         #xscroll.grid(row=1, column=0, sticky=tk.E+tk.W)
         yscroll = tk.Scrollbar(frame)
         #yscroll.grid(row=0, column=1, sticky=tk.N+tk.S)
-        self.canvas = tk.Canvas(frame, bd=0, width=self.iterator_x, height=self.iterator_y, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+        self.canvas = tk.Canvas(frame, bd=0, width=self.screen_width, height=self.screen_height, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
             
         #self.canvas = tk.Canvas(frame, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
@@ -538,11 +540,10 @@ class Interface(tk.Frame):
             self.remove_buttons('Fisrt Menu')
             self.labelling_start()
             self.remove_buttons('Draw Menu')
-
+            self.name_tif = '"' + self.name_tif + '"'
             if(self.load_progress()):
 
                 if(str(self.directory_saved) == str((self.name_tif))):
-                    print('deus')
                     mbox.showinfo('Information','O Progresso Anterior foi Carregado!')
                     self.dst_img = gdal.Open('resutado_gerado.tif', gdal.GA_Update)
                     
@@ -551,17 +552,20 @@ class Interface(tk.Frame):
                     self.y_crop = 0.0
                     self.dst_img = gdal.GetDriverByName('GTiff').Create('resutado_gerado.tif', self.mosaico.RasterXSize, self.mosaico.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
                     self.dst_img.SetProjection(self.mosaico.GetProjectionRef())
-                    self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform()) 
+                    self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform())
+          
             else:
                 self.x_crop = 0.0
                 self.y_crop = 0.0
+                self.dst_img = gdal.GetDriverByName('GTiff').Create('resutado_gerado.tif', self.mosaico.RasterXSize, self.mosaico.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
+                self.dst_img.SetProjection(self.mosaico.GetProjectionRef())
+                self.dst_img.SetGeoTransform(self.mosaico.GetGeoTransform()) 
 
             self.daninha_1 = gdal.Open(self.reference_binary)
             self.daninha_band_1 =  self.daninha_1.GetRasterBand(1)
-            
+
             self.button_right.bind("<Button-1>", partial(self.button_click, key="1"))
             self.button_left.bind("<Button-1>", partial(self.button_click, key="0"))
-
 
         if self.ready_start:
             self.rm_btn()
@@ -709,7 +713,7 @@ class Interface(tk.Frame):
 
         self.bool_draw = False
         self.draw_lines_array.clear()
-        self.draw_img = PIL.Image.new("RGB",(self.iterator_x, self.iterator_y),(0,0,0))
+        self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
         self.draw_line = ImageDraw.Draw(self.draw_img)
         self.cnt_validator = []
         
@@ -789,31 +793,22 @@ class Interface(tk.Frame):
                     #print('aqui2')
                 
                 self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
-        #print('x :', self.x_crop,', y :', self.y_crop)
+
         self.daninha_parcela = self.daninha_band_1.ReadAsArray(self.x_crop, self.y_crop, self.iterator_x, self.iterator_y)
-        #while (cv2.countNonZero(self.daninha_parcela) == 0):  
                         
         blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
         self.imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
         self.imgparcela[self.daninha_parcela == 0] = 0
-        '''
-        img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        self.img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        union, self.dif = nf.diff_contourns(self, img_neural, self.img_binary)
-    
-        self.contours = nf.find_contourns(self, self.dif)
-        self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
-        
-        img = PIL.Image.fromarray(self.draw)'''
 
-        img = PIL.Image.fromarray(self.imgparcela)
+        img = cv2.resize(self.imgparcela, (self.screen_width, self.screen_height))
+        img = PIL.Image.fromarray(img)
         self.image_tk = ImageTk.PhotoImage(img)
         self.array_clicks.clear()
         self.first_click = True
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.canvas.create_image(self.iterator_x // 2, self.iterator_y // 2, image=self.image_tk, anchor=tk.CENTER)
+        self.canvas.create_image(self.screen_width// 2, self.screen_height // 2, image=self.image_tk, anchor=tk.CENTER)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
         self.canvas.bind("<Button-1>",  self.get_x_and_y)
@@ -835,13 +830,7 @@ class Interface(tk.Frame):
                                     joinstyle=tk.ROUND, width=int(self.slider_pencil),
                                     smooth=True, splinesteps=12,
                                     dash=(3,5), stipple=self.slider_opacity)
-            '''                                             
-                self.canvas_draw = self.canvas.create_polygon((self.array, event.x, event.y), 
-                                                            fill='red', capstyle=tk.ROUND, 
-                                                            joinstyle=tk.ROUND, width=10,
-                                                            smooth=True, splinesteps=12,
-                                                            dash=(3,5))
-            '''
+
             lasx, lasy = event.x, event.y
             self.draw_line.line((lasx, lasy, event.x, event.y), (255,255,255), width=int(self.slider_pencil), joint='curve')
 
@@ -857,19 +846,15 @@ class Interface(tk.Frame):
             for i in range(0, len(self.draw_lines_array[:][:]), 1):
                 if  lasx - self.slider_pencil <= self.draw_lines_array[:][i][1] and lasx + self.slider_pencil > self.draw_lines_array[:][i][1] and \
                     lasy - self.slider_pencil <= self.draw_lines_array[:][i][2] and lasy + self.slider_pencil > self.draw_lines_array[:][i][2]:
-                    #print('x_cord :', lasx, 'y_cord :',lasy)
-                    #print(self.draw_lines_array[:][i])
+                    
                     self.canvas.delete(self.draw_lines_array[:][i][0])
                     self.draw_line.line((lasx, lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
                     Offset = (int(self.slider_pencil))/2
                     self.draw_line.ellipse ((lasx-Offset,lasy-Offset,lasx+Offset,lasy+Offset), (0,0,0))
        
-        self.bool_draw = True
-        #print(self.draw_lines_array) 
         self.save_draw_array = np.asarray(self.draw_img)
-        self.save_draw_array = nf.prepare_array(self, self.save_draw_array)
-        #self.save_draw_array = nf.prepare_array(self, self.save_draw_array)
-        #ia.imshow(self.save_draw_array[0][0]) 
+        self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
+        self.bool_draw = True
                 
     def printcoords(self, event):
 
@@ -1048,25 +1033,23 @@ class Interface(tk.Frame):
         mbox.showinfo("Information", "Shape Gerado com Sucesso!: ")
 
     def load_progress(self):
-
+        
         try:   
-            f = open('log_progress.txt', 'r')
+            f = open('log_progress.txt', encoding="utf-8")
             for lines in f:
                 pass
-
             values = lines.split(',')
             self.x_crop = float(values[0])
             self.y_crop = float(values[1])
-            self.directory_saved = values[2]
+            self.directory_saved = str(values[2])
 
-            print('x', self.x_crop, 'y', self.y_crop, 'dir:', self.directory_saved)
             bool_check_dir = True
             f.close()
 
         except:
-            print('Nao abriu')
+            f = open('log_progress.txt','x', encoding="utf-8")
             bool_check_dir = False
-
+            f.close()
         return(bool_check_dir)
 
 
@@ -1076,7 +1059,7 @@ class Interface(tk.Frame):
             string_text = str(self.x_crop) + ',' + str(self.y_crop) + ',' + str(self.name_tif) + ', \n'
             with open("log_progress.txt", "ab") as f:
                 f.write(string_text.encode('utf-8', 'ignore'))
-        
+
         root.destroy()
 
 if __name__ == "__main__":
