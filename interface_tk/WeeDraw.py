@@ -106,77 +106,55 @@ class Interface(tk.Frame):
         root.configure(menu = self.menubar)
 
         self.Scale1 = tk.Scale(root, from_=0.0, to=100.0)
-        self.Scale1.place(relx=0.417, rely=0.044, relheight=0.5
-                , relwidth=0.173)
+        self.Scale1.place(relx=0.417, rely=0.044, relheight=0.5, relwidth=0.173)
         self.Scale1.configure(orient="horizontal")
         self.Scale1.configure(troughcolor="#000000")
 
         self.btn_load_mosaico = tk.Button(root)
         self.btn_load_mosaico.place(relx=0.74, rely=0.572, height=28, width=123)
-        self.btn_load_mosaico.configure(takefocus="")
-        self.btn_load_mosaico.configure(text='Mosaico')
+        self.btn_load_mosaico.configure(takefocus="", text='Mosaico')
         self.btn_load_mosaico.bind('<Button-1>', partial(self.get_btn, key="0"))
 
         self.btn_shape_reference = tk.Button(root)
         self.btn_shape_reference.place(relx=0.74, rely=0.659, height=28, width=123)
-        self.btn_shape_reference.configure(takefocus="")
-        self.btn_shape_reference.configure(text='Shape de Refer')
+        self.btn_shape_reference.configure(takefocus="", text='Shape de Refer')
         self.btn_shape_reference.bind('<Button-1>', partial(self.get_btn, key="1"))
 
         self.btn_shape_neural = tk.Button(root)
         self.btn_shape_neural.place(relx=0.74, rely=0.747, height=28, width=123)
-        self.btn_shape_neural.configure(takefocus="")
-        self.btn_shape_neural.configure(text='Shape da Rede')
+        self.btn_shape_neural.configure(takefocus="", text='Shape da Rede')
         self.btn_shape_neural.bind('<Button-1>', partial(self.get_btn, key="2"))
 
         self.btn_start = tk.Button(root)
         self.btn_start.place(relx=0.742, rely=0.871, height=48, width=123)
-        self.btn_start.configure(takefocus="")
-        self.btn_start.configure(text='Iniciar')
+        self.btn_start.configure(takefocus="", text='Iniciar')
         self.btn_start.bind('<Button-1>', partial(self.get_btn, key="5"))
 
         self.spinbox1 = tk.Spinbox(root, from_=10.0, to=800.0, increment=10, textvariable=self.spn_box_1)
         self.spinbox1.place(relx=0.74, rely=0.178, relheight=0.046, relwidth=0.243)
-        self.spinbox1.configure(activebackground="#f9f9f9")
-        self.spinbox1.configure(background="white")
-        self.spinbox1.configure(font="TkDefaultFont")
-        self.spinbox1.configure(highlightbackground="black")
-        self.spinbox1.configure(selectbackground="blue")
-        self.spinbox1.configure(selectforeground="white")
-        self.spinbox1.configure(command=self.get_values_spinbox)
+        self.spinbox1.configure(activebackground="#f9f9f9", background="white", font="TkDefaultFont", 
+                                highlightbackground="black", selectbackground="blue", selectforeground="white", 
+                                command=self.get_values_spinbox)
 
         self.spinbox2 = tk.Spinbox(root, from_=100.0, to=800.0, increment=100, textvariable=self.spn_box_2)
-        self.spinbox2.place(relx=0.74, rely=0.271, relheight=0.046
-                , relwidth=0.243)
-        self.spinbox2.configure(activebackground="#f9f9f9")
-        self.spinbox2.configure(background="white")
-        self.spinbox2.configure(font="TkDefaultFont")
-        self.spinbox2.configure(highlightbackground="black")
-        self.spinbox2.configure(selectbackground="blue")
-        self.spinbox2.configure(selectforeground="white")
-        self.spinbox2.configure(command=self.get_values_spinbox)
+        self.spinbox2.place(relx=0.74, rely=0.271, relheight=0.046, relwidth=0.243)
+        self.spinbox2.configure(activebackground="#f9f9f9", background="white", font="TkDefaultFont", 
+                                highlightbackground="black", selectbackground="blue", selectforeground="white", 
+                                command=self.get_values_spinbox)
 
         self.spinbox3 = tk.Spinbox(root, from_=100.0, to=800.0, increment=100, textvariable=self.spn_box_3)
         self.spinbox3.place(relx=0.74, rely=0.364, relheight=0.046, relwidth=0.243)
-        self.spinbox3.configure(activebackground="#f9f9f9")
-        self.spinbox3.configure(background="white")
-        self.spinbox3.configure(font="TkDefaultFont")
-        self.spinbox3.configure(highlightbackground="black")
-        self.spinbox3.configure(selectbackground="blue")
-        self.spinbox3.configure(selectforeground="white")
-        self.spinbox3.configure(command=self.get_values_spinbox)
+        self.spinbox3.configure(activebackground="#f9f9f9", background="white", font="TkDefaultFont", 
+                                highlightbackground="black", selectbackground="blue", selectforeground="white", 
+                                command=self.get_values_spinbox)
         
-       
         self.label1 = tk.Label(root)
         self.label1.place(relx=0.015, rely=0.178, height=21, width=245)
-        self.label1.configure(activebackground="#f9f9f9")
-        self.label1.configure(text='Escolha a porcentagem de iteração :')
+        self.label1.configure(activebackground="#f9f9f9", text='Escolha a porcentagem de iteração :')
 
         self.Radiobutton1 = tk.Radiobutton(root)
-        self.Radiobutton1.place(relx=0.721, rely=0.455, relheight=0.046
-                , relwidth=0.132)
-        self.Radiobutton1.configure(justify='left')
-        self.Radiobutton1.configure(text='Padrão', value=True, variable=self.bool_value, command=self.get_values_radio,)
+        self.Radiobutton1.place(relx=0.721, rely=0.455, relheight=0.046, relwidth=0.132)
+        self.Radiobutton1.configure(justify='left', text='Padrão', value=True, variable=self.bool_value, command=self.get_values_radio,)
 
         self.label2 = tk.Label(root)
         self.label2.place(relx=0.021, rely=0.269, height=21, width=235)
@@ -213,66 +191,51 @@ class Interface(tk.Frame):
 
         self.Scale1 = tk.Scale(root, tickinterval=1, from_=1.0, to=5.0, command=self.slider_changed_opacity,   variable=self.current_value_opacity)
         self.Scale1.place(relx=0.60, rely=0.88, relheight=0.093, relwidth=0.271)
-        self.Scale1.configure(length="251")
-        self.Scale1.configure(orient="horizontal")
-        self.Scale1.configure(troughcolor="#d9d9d9")
+        self.Scale1.configure(length="251", orient="horizontal", troughcolor="#d9d9d9")
 
-        
         self.Scale2 = tk.Scale(root, tickinterval=5, from_=10.0, to=50.0, command=self.slider_changed_draw,   variable=self.current_value_draw)
         self.Scale2.place(relx=0.132, rely=0.88, relheight=0.093, relwidth=0.271)
-        self.Scale2.configure(length="249")
-        self.Scale2.configure(orient="horizontal")
-        self.Scale2.configure(troughcolor="#d9d9d9")
+        self.Scale2.configure(length="249", orient="horizontal", troughcolor="#d9d9d9")
         
         self.next_icon = PhotoImage(file = r"icons/next.png")
+
         self.button_right = tk.Button(root, image = self.next_icon)
         self.button_right.place(relx=0.926, rely=0.363, height=83, width=43)
         self.button_right.configure(borderwidth="2")
-        #self.button_right.configure(text='>')
 
         self.back_icon = PhotoImage(file = r"icons/back.png")
+
         self.button_left = tk.Button(root, image = self.back_icon)
         self.button_left.place(relx=0.031, rely=0.363, height=83, width=43)
         self.button_left.configure(borderwidth="2")
-        self.button_left.configure(text='<')
 
         frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
         xscroll = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
-        #xscroll.grid(row=1, column=0, sticky=tk.E+tk.W)
         yscroll = tk.Scrollbar(frame)
-        #yscroll.grid(row=0, column=1, sticky=tk.N+tk.S)
         self.canvas = tk.Canvas(frame, bd=0, width=self.screen_width, height=self.screen_height, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
-            
-        #self.canvas = tk.Canvas(frame, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        #xscroll.config(command=self.canvas.xview)
-        #yscroll.config(command=self.canvas.yview)
         frame.pack(expand=1)
 
         self.pencil_icon = PhotoImage(file = r"icons/pencil_2.png")
         self.pencil_icon =  self.pencil_icon.subsample(1, 1)
-        self.TButton1 = tk.Button(root, image = self.pencil_icon)
-        self.TButton1.place(relx=0.132, rely=0.82, height=40, width=40)
-        #self.TButton1.configure(borderwidth="2")
-        self.TButton1.bind("<Button-1>", partial(self.get_btn, key='6'))
+
+        self.pencil_btn = tk.Button(root, image = self.pencil_icon)
+        self.pencil_btn.place(relx=0.132, rely=0.82, height=40, width=40)
+        self.pencil_btn.bind("<Button-1>", partial(self.get_btn, key='6'))
 
         self.transp_icon = PhotoImage(file = r"icons/transparency.png")
         self.transp_icon =  self.transp_icon.subsample(2, 2)
-        self.TButton2 = tk.Button(root, image=self.transp_icon)
-        self.TButton2.place(relx=0.831, rely=0.82, height=40, width=40)
-        #self.TButton2.configure(borderwidth="2")
-        self.TButton2.bind("<Button-1>", partial(self.get_btn, key='8'))
-        
+        self.transparency_btn = tk.Button(root, image=self.transp_icon)
+        self.transparency_btn.place(relx=0.831, rely=0.82, height=40, width=40)
+        self.transparency_btn.bind("<Button-1>", partial(self.get_btn, key='8'))
         
         self.erase_icon = PhotoImage(file = r"icons/erase.png")
         self.erase_icon =  self.erase_icon.subsample(1, 1)
-        self.TButton3 = tk.Button(root, image=self.erase_icon)
-        self.TButton3.place(relx=0.180, rely=0.82, height=40, width=40)
-        self.TButton3.bind("<Button-1>", partial(self.get_btn, key='7'))
-        #self.TButton3.configure(takefocus="")
-        #self.TButton3.configure(text='3')
+        self.erase_btn = tk.Button(root, image=self.erase_icon)
+        self.erase_btn.place(relx=0.180, rely=0.82, height=40, width=40)
+        self.erase_btn.bind("<Button-1>", partial(self.get_btn, key='7'))
 
         self.current_value_opacity.set(5.0)
 
@@ -282,9 +245,9 @@ class Interface(tk.Frame):
         self.opt.destroy()
 
         self.label1 = tk.Label(root)
-        self.label1.place(relx=0.115, rely=0.52, height=21, width=245)
+        self.label1.place(relx=0.085, rely=0.52, height=21, width=200)
         self.label1.configure(activebackground="#f9f9f9")
-        self.label1.configure(text='Escolha a porcentagem de iteração :')
+        self.label1.configure(text='Selecione o Mosaico :')
 
         self.btn_load_mosaico = tk.Button(root)
         self.btn_load_mosaico.place(relx=0.72, rely=0.52, height=28, width=123)
@@ -360,10 +323,7 @@ class Interface(tk.Frame):
         self.logo =  self.logo.subsample(5, 5)
         self.canvas1 = tk.Canvas(root)
         self.canvas1.place(relx=0.117, rely=0.111, relheight=0.291, relwidth=0.752)
-        self.canvas1.configure(borderwidth="2")
-        self.canvas1.configure(relief="ridge")
-        self.canvas1.configure(selectbackground="blue")
-        self.canvas1.configure(selectforeground="white")
+        self.canvas1.configure(borderwidth="2", relief="ridge", selectbackground="blue", selectforeground="white")
         self.canvas1.create_image(300,90,image=self.logo, anchor='center')
 
         self.label1 = tk.Label(root)
@@ -374,11 +334,10 @@ class Interface(tk.Frame):
         self.variable.set('Ainda Nao Selecionado')
 
         self.opt = tk.OptionMenu(app, self.variable, *self.OptionList)
-        #opt.config(width=90, font=('Helvetica', 12))
         self.opt.place(x=self.width_size*0.50, y=self.hight_size*0.57)
 
-        self.labelTest = tk.Label(text="", font=('Helvetica', 12), fg='red')
-        self.labelTest.pack(side="top")
+        self.label_opt = tk.Label(text="", font=('Helvetica', 12), fg='red')
+        self.label_opt.pack(side="top")
 
         self.variable.trace("w", self.callback_opt)
 
@@ -425,14 +384,13 @@ class Interface(tk.Frame):
             #self.label4.destroy()
             #self.label5.destroy()
 
-
         else:
             
             self.canvas1.destroy()
             self.label1.destroy()
 
             self.opt.destroy()
-            self.labelTest.destroy()
+            self.label_opt.destroy()
 
     def get_text(self):  
         text_val = self.entry_text.get()
@@ -444,7 +402,7 @@ class Interface(tk.Frame):
         self.slider_pencil = self.current_value_draw.get()
         if  self.slider_pencil < 10:
             self.slider_pencil = 10
-        
+    
         return '{: .2f}'.format(self.current_value_draw.get())
 
     def get_current_value_opacity(self):
@@ -567,24 +525,6 @@ class Interface(tk.Frame):
             self.button_right.bind("<Button-1>", partial(self.button_click, key="1"))
             self.button_left.bind("<Button-1>", partial(self.button_click, key="0"))
 
-        if self.ready_start:
-            self.rm_btn()
-            
-            self.reference_binary = gdal.Open(self.shp_to_bin(self.name_reference_binary, self.name_tif), 1)
-            self.reference_neural = gdal.Open(self.shp_to_bin(self.name_reference_neural, self.name_tif), 1)
-            
-            self.dst_img = gdal.GetDriverByName('GTiff').Create(self.name_reference_binary + '_out_2.tif', self.reference_binary.RasterXSize, self.reference_binary.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
-            self.dst_img.SetProjection(self.reference_binary.GetProjectionRef())
-            self.dst_img.SetGeoTransform(self.reference_binary.GetGeoTransform()) 
-
-            button_left = tk.Button(root, text="Back")
-            button_left.place(relx=0.02, rely=0.4, height=48, width=100)
-            button_left.bind("<Button-1>", partial(self.button_click, key="0"))
-
-            button_right = tk.Button(root, text="Next")
-            button_right.place(relx=0.85, rely=0.4, height=48, width=100)
-            button_right.bind("<Button-1>", partial(self.button_click, key="1"))
-
     def run(self):
         self.labelling_start()
             
@@ -644,7 +584,7 @@ class Interface(tk.Frame):
             self.remove_buttons()
 
         if(self.variable.get() == 'Test Neural Network'):
-            self.labelTest.destroy()
+            self.label_opt.destroy()
             self.opt.destroy()
             self.create_buttons()
 
@@ -826,10 +766,10 @@ class Interface(tk.Frame):
         global lasx, lasy
         if(self.option_draw):
             self.line_obj = self.canvas.create_line((lasx, lasy, event.x, event.y), 
-                                    fill='red', capstyle=tk.ROUND, 
-                                    joinstyle=tk.ROUND, width=int(self.slider_pencil),
-                                    smooth=True, splinesteps=12,
-                                    dash=(3,5), stipple=self.slider_opacity)
+                                                     fill='red', capstyle=tk.ROUND, 
+                                                     joinstyle=tk.ROUND, width=int(self.slider_pencil),
+                                                     smooth=True, splinesteps=12,
+                                                     dash=(3,5), stipple=self.slider_opacity)
 
             lasx, lasy = event.x, event.y
             self.draw_line.line((lasx, lasy, event.x, event.y), (255,255,255), width=int(self.slider_pencil), joint='curve')
@@ -857,7 +797,6 @@ class Interface(tk.Frame):
         self.bool_draw = True
                 
     def printcoords(self, event):
-
         cx, cy = self.event2canvas(event, self.canvas)
         self.ctn = []
         if self.first_click == True: 
@@ -976,7 +915,6 @@ class Interface(tk.Frame):
         base_shp = ogr.Open(name_shp)
         base_shp_layer = base_shp.GetLayer()
 
-        #output_name = name_shp + '_out.tif
         output = gdal.GetDriverByName('GTiff').Create(name_shp + '_out.tif', base_img.RasterXSize, base_img.RasterYSize, 1, gdal.GDT_Byte, options=['COMPRESS=DEFLATE'])
         output.SetProjection(base_img.GetProjectionRef())
         output.SetGeoTransform(base_img.GetGeoTransform()) 
