@@ -40,10 +40,11 @@ class Interface(tk.Frame):
         self.iterator_x = 256
         self.iterator_y = 256
 
-        self.screen_width = 256
-        self.screen_height = 256
+        self.screen_width = 512
+        self.screen_height = 512
 
-        self.iterator_recoil = 0.8
+        self.count_img = 0
+        self.iterator_recoil = 1.0
         self.cnt_validator = []
         self.background_percent = 0.8
         self.array_clicks = []
@@ -79,7 +80,7 @@ class Interface(tk.Frame):
 
         self.var = tk.IntVar()
         self.old_choose = '' 
-        self.OptionList = ["Comparar Resultados", "Efetuar Marcacoes"] 
+        self.OptionList = ["Comparar Resultados", "Comparar por Diretorios" ,"Efetuar Marcacoes"] 
 
         img = ImageTk.PhotoImage(file='icons/icone_sensix.png')
         root.call('wm', 'iconphoto', root._w, img)
@@ -455,6 +456,44 @@ class Interface(tk.Frame):
     def slider_changed_draw(self, event):
         self.value_label.configure(text=self.get_current_value_draw())
 
+    def change_dir(self, event=None, key=None):
+        self.cnt_validator = []   
+
+        if (key == "1"):
+            self.count_img += 1
+       
+        else:
+            self.count_img += -1
+
+        print(self.name_dir[self.count_img])
+        
+        self.img_rgb = cv2.imread(self.diretorio_rgb + self.name_dir[self.count_img], 1)
+        self.img_neural = cv2.imread(self.diretorio_pred + self.name_dir[self.count_img], 1)
+        self.img_neural = cv2.cvtColor(self.img_neural, cv2.COLOR_BGR2GRAY)
+        self.img_neural = nf.adjust_pixels(self, self.img_neural, 50)
+        #self.img_neural = nf.ellipse_overlap(self, self.img_neural, )
+        
+        self.img_binary = cv2.imread(self.diretorio_true + self.name_dir[self.count_img], 1)
+        self.img_binary = cv2.cvtColor(self.img_binary, cv2.COLOR_BGR2GRAY) 
+
+        self.union, self.dif = nf.diff_contourns(self, self.img_binary, self.img_neural,)
+        self.contours = nf.find_contourns(self, self.dif)
+        self.draw = cv2.drawContours(self.img_rgb, self.contours, -1, (255, 0, 0), 3)
+        
+        img = PIL.Image.fromarray(self.draw)
+        img = cv2.resize(self.img_rgb, (self.screen_width, self.screen_height))
+        img = PIL.Image.fromarray(img)
+        self.image_tk = ImageTk.PhotoImage(img)
+
+        self.img_canvas_id = self.canvas.create_image(self.screen_width// 2, self.screen_height // 2, image=self.image_tk, anchor=tk.CENTER)
+        #print(self.img_canvas_id)
+        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
+        self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+
+        self.first_click = True      
+        self.canvas.bind("<ButtonPress-1>",self.printcoords)
+
+
     def get_values_spinbox(self, type=''):
 
         if type == 'Comparar Resultados':
@@ -506,12 +545,23 @@ class Interface(tk.Frame):
 
         elif key=='6':
             self.option_draw = True
+            self.opacity = False
 
         elif key=='7':
             self.option_draw = False
+            self.opacity = False
 
         elif key=='8':
-            self.opacity = True
+            self.opacity = not self.opacity
+            if self.opacity:
+                option_img = 'normal'
+                print('No if')
+                self.canvas.tag_lower(self.img_canvas_id)
+                self.canvas.update()
+            else:
+                self.canvas.tag_raise(self.img_canvas_id)
+                self.canvas.update()
+            
 
         elif self.name_tif != '' and self.name_reference_binary != '' and self.name_reference_neural != '' and key=='5':
             root.geometry("800x600+50+10")
@@ -581,13 +631,13 @@ class Interface(tk.Frame):
             self.button_right = tk.Button(root, image = self.next_icon)
             self.button_right.place(relx=0.926, rely=0.363, height=83, width=43)
             self.button_right.configure(borderwidth="2")
-            self.button_right.bind("<Button-1>", partial(self.button_click_compare, key="1"))
+            self.button_right.bind("<Button-1>", partial(self.change_dir, key="1"))
 
             self.back_icon = PhotoImage(file = r"icons/back.png")
             self.button_left = tk.Button(root, image = self.back_icon)
             self.button_left.place(relx=0.031, rely=0.363, height=83, width=43)
             self.button_left.configure(borderwidth="2")
-            self.button_left.bind("<Button-1>", partial(self.button_click_compare, key="0"))
+            self.button_left.bind("<Button-1>", partial(self.change_dir, key="0"))
 
 
     def run(self):
@@ -628,53 +678,6 @@ class Interface(tk.Frame):
         #Painel Inferior Direito
         self.painel_down_right = tk.Label(root)
         self.painel_down_right.place(x=320, y=366)
-
-    def button_click_compare(self, event=None, key=None):
-        self.cnt_validator = []
-        if (key == "1"):
-    
-            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
-                self.x_crop += self.iterator_x
-
-            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
-                self.x_crop =0
-                self.y_crop += self.iterator_y
-
-        elif (key == "0"):
-
-            if (self.x_crop+self.iterator_x < self.mosaico.RasterXSize):
-                self.x_crop -= self.iterator_x
-
-            if (self.x_crop+self.iterator_x > self.mosaico.RasterYSize):
-                self.x_crop =0
-                self.y_crop -= self.iterator_y
-
-        blueparcela = self.blue.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        greenparcela = self.green.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        redparcela = self.red.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        self.imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
-
-        img_neural = self.reference_neural.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        self.img_binary   = self.reference_binary.ReadAsArray(self.x_crop, self.y_crop,self.iterator_x, self.iterator_y)
-        union, self.dif = nf.diff_contourns(self, img_neural, self.img_binary)
-    
-        self.contours = nf.find_contourns(self, self.dif)
-        self.draw = cv2.drawContours(self.imgparcela, self.contours, -1, (255, 0, 0), 3)
-        
-        img = PIL.Image.fromarray(self.draw)
-        self.image_tk = ImageTk.PhotoImage(img)
-        
-        self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.img_canvas_id = self.canvas.create_image(self.screen_width//2, self.screen_height//2, image=self.image_tk, anchor=tk.CENTER)
-        #print(self.img_canvas_id)
-        self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
-    
-        self.first_click = True      
-        self.canvas.bind("<ButtonPress-1>",self.printcoords)
-        
-        #ia.imshow(self.img_fit)
-
-        return key
 
     def select_image(self):
 
@@ -723,6 +726,45 @@ class Interface(tk.Frame):
             self.remove_buttons()
             self.start()
             
+        
+        elif(self.variable.get() == 'Comparar por Diretorios'):
+            self.remove_buttons()
+
+            '''
+            self.diretorio_rgb = filedialog.askdirectory(title='Selecione o diretorio de imagens RGB :') + '/'
+            self.diretorio_true = filedialog.askdirectory(title='Selecione o diretorio de imagens de marcacoes manuais :') + '/'
+            self.diretorio_pred = filedialog.askdirectory(title='Selecione o diretorio de imagens de predicao :') + '/'
+            '''
+            self.diretorio_rgb = "../../daninhas/ortomosaicos/pre-emergente/190837/rgb/"
+            self.diretorio_true = "../../daninhas/ortomosaicos/pre-emergente/190837/marcacoes_manuais/"
+            self.diretorio_pred = "../../daninhas/ortomosaicos/pre-emergente/190837/resultados_rede_manuais/"
+
+            print(self.diretorio_rgb, self.diretorio_true, self.diretorio_pred)
+            self.name_dir = os.listdir(self.diretorio_rgb)
+            frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
+            xscroll = tk.Scrollbar(frame, orient=tk.HORIZONTAL)
+            yscroll = tk.Scrollbar(frame)
+            self.canvas = tk.Canvas(frame, bd=0, width=self.screen_width, height=self.screen_height, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+                
+            #self.canvas = tk.Canvas(frame, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+            self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
+            #xscroll.config(command=self.canvas.xview)
+            #yscroll.config(command=self.canvas.yview)
+            frame.pack(expand=1)
+            self.next_icon = PhotoImage(file = r"icons/next.png")
+            self.button_right = tk.Button(root, image = self.next_icon)
+            self.button_right.place(relx=0.926, rely=0.363, height=83, width=43)
+            self.button_right.configure(borderwidth="2")
+            self.button_right.bind("<Button-1>", partial(self.change_dir, key="1"))
+
+            self.back_icon = PhotoImage(file = r"icons/back.png")
+            self.button_left = tk.Button(root, image = self.back_icon)
+            self.button_left.place(relx=0.031, rely=0.363, height=83, width=43)
+            self.button_left.configure(borderwidth="2")
+            self.button_left.bind("<Button-1>", partial(self.change_dir, key="0"))
+
         elif(self.variable.get() == 'Efetuar Marcacoes'):
 
             if not os.path.isdir(self.path_save_img_rgb):
@@ -742,12 +784,15 @@ class Interface(tk.Frame):
              
     def button_click(self, event=None, key=None):
         if (self.bool_draw):
-            #print(self.draw_lines_array)
+            print(len(self.draw_lines_array))
+            for i in range(0, len(self.draw_lines_array), 1):
+                try:
+                    print(self.draw_lines_array[i][0])
+                    self.canvas.delete(self.draw_lines_array[i][0])
+                except:
+                    print('problema no id  :', i)
 
-            for i in range(1, len(self.draw_lines_array), 1):
-                #print(self.draw_lines_array[:][i][0])
-                self.canvas.delete(self.draw_lines_array[:][i][0])
-
+            self.canvas.delete(self.img_canvas_id)
             cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
             cv2.imwrite(self.path_save_img_bin + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.save_draw_array)
             self.dst_img.GetRasterBand(1).WriteArray(self.save_draw_array, xoff=self.x_crop, yoff=self.y_crop)
@@ -761,8 +806,6 @@ class Interface(tk.Frame):
 
             self.draw_lines_array.clear()
             self.canvas.update()
-
-
 
         if (key == "1"):
             if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
@@ -858,7 +901,6 @@ class Interface(tk.Frame):
         self.first_click = True
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
         self.img_canvas_id = self.canvas.create_image(self.screen_width// 2, self.screen_height // 2, image=self.image_tk, anchor=tk.CENTER)
-        #print(self.img_canvas_id)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
         self.canvas.bind("<Button-1>",  self.get_x_and_y)
@@ -872,20 +914,20 @@ class Interface(tk.Frame):
 
     def draw_smth(self, event):
         if(self.option_draw):
+            self.lasx, self.lasy = event.x, event.y
             self.line_obj = self.canvas.create_line((self.lasx, self.lasy, event.x, event.y), 
                                     fill='red', capstyle=tk.ROUND, 
                                     joinstyle=tk.ROUND, width=int(self.slider_pencil),
                                     smooth=True, splinesteps=12,
                                     dash=(3,5), stipple=self.slider_opacity)
             
-            self.lasx, self.lasy = event.x, event.y
             self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (255,255,255), width=int(self.slider_pencil), joint='curve')
             Offset = (int(self.slider_pencil))/2
             self.draw_line.ellipse ((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (255,255,255))
             
-            x = [[self.line_obj, self.lasx, self.lasy]]
-                
-            self.draw_lines_array.extend(x)
+            clicks_ids = [[self.line_obj, self.lasx, self.lasy]]
+            self.draw_lines_array.extend(clicks_ids)
+            print(self.draw_lines_array)
 
         else:
             self.lasx, self.lasy = event.x, event.y
@@ -896,7 +938,7 @@ class Interface(tk.Frame):
                     self.canvas.delete(self.draw_lines_array[:][i][0])
                     self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
                     Offset = (int(self.slider_pencil))/2
-                    self.draw_line.ellipse ((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
+                    self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
 
         self.save_draw_array = np.asarray(self.draw_img)
         self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
@@ -924,14 +966,14 @@ class Interface(tk.Frame):
                 self.ctn = self.contours[i]
 
                 if self.cnt_validator[i] == True:
-                    self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (0, 255, 0), 3)
+                    self.draw = cv2.drawContours(self.img_rgb, self.ctn, -1, (0, 255, 0), 3)
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(255,255,255))
 
                     union_ref_checker = nf.diff_contourns(self, self.img_binary, self.img_fit)[0]
-                    self.dst_img.GetRasterBand(1).WriteArray(union_ref_checker, xoff=self.x_crop, yoff=self.y_crop)
-                    self.dst_img.FlushCache()
+                    #self.dst_img.GetRasterBand(1).WriteArray(union_ref_checker, xoff=self.x_crop, yoff=self.y_crop)
+                    #self.dst_img.FlushCache()
                 else:
-                    self.draw = cv2.drawContours(self.imgparcela, self.ctn, -1, (255, 0, 0), 3)
+                    self.draw = cv2.drawContours(self.img_rgb, self.ctn, -1, (255, 0, 0), 3)
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(0,0,0))
 
         print('validator :', self.cnt_validator)
@@ -939,7 +981,6 @@ class Interface(tk.Frame):
         self.image_tk = ImageTk.PhotoImage(img)
 
         self.img_canvas_id = self.canvas.create_image(self.screen_width// 2, self.screen_height // 2, image=self.image_tk, anchor=tk.CENTER)
-        #print(self.img_canvas_id)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
         
 
