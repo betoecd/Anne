@@ -45,12 +45,14 @@ class Interface(tk.Frame):
         self.screen_height = 512
 
         self.count_img = 0
+        self.count_feature = 0
         self.iterator_recoil = 1.0
         self.cnt_validator = []
         self.background_percent = 0.8
         self.array_clicks = []
         self.current_points = []
         self.draw_lines_array = [[]]
+        self.features_polygons = [[]]
         self.polygons_ids_array = []
         self.vertices_ids_array = []
 
@@ -803,6 +805,8 @@ class Interface(tk.Frame):
              
     def button_click(self, event=None, key=None):
         if (self.bool_draw):
+            self.count_feature = 0
+            data_polygons = []
             print(len(self.draw_lines_array))
             for i in range(0, len(self.draw_lines_array), 1):
                 try:
@@ -823,6 +827,25 @@ class Interface(tk.Frame):
                 except:
                     print('problema no id  :', i)
 
+            for i in range(0, len(self.features_polygons), 1):   
+                try:    
+                    '''         
+                    if self.features_polygons[i][0] == self.features_polygons[i+1][0]:
+                        data_polygons.append((self.features_polygons[i][2][0], self.features_polygons[i][2][1]))
+                        #self.draw_line.polygon((data_polygons), fill='white', outline='white')
+    
+                    else:
+                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                        #print('no else', (self.features_polygons[i][2], self.features_polygons[i+1][2]))
+                        data_polygons.clear()
+                    '''
+                    data_polygons.append((self.features_polygons[i][2][0], self.features_polygons[i][2][1]))
+                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                except:
+                    pass
+                print(data_polygons)
+                self.save_draw_array = np.asarray(self.draw_img)
+                self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
 
             self.canvas.delete(self.img_canvas_id)
             cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
@@ -831,12 +854,13 @@ class Interface(tk.Frame):
             self.dst_img.FlushCache()
             self.bool_draw = False
         
-            self.draw_img = PIL.Image.new("RGBA",(self.screen_width, self.screen_height),(0,0,0,0))
+            self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
             self.draw_line = ImageDraw.Draw(self.draw_img)
             self.cnt_validator = []
             #self.canvas.delete(self.line_obj)
 
             self.draw_lines_array.clear()
+            self.features_polygons.clear()
             self.canvas.update()
 
         if (key == "1"):
@@ -942,36 +966,31 @@ class Interface(tk.Frame):
           
     def right_click(self, event):
         self.current_points.clear()
-    
+        self.count_feature += 1
+
     def get_x_and_y(self, event):
         self.lasx, self.lasy = event.x, event.y
         if(self.polygon_draw):            
-            self.current_points.append(self.lasx, self.lasy)
-
+            self.current_points.append((self.lasx, self.lasy))
+            print(self.current_points)
             for pt in self.current_points:
                 x, y =  pt
                 x1, y1 = (x - 1), (y - 1)
                 x2, y2 = (x + 1), (y + 1)
-                self.vertices_ids = self.canvas.create_oval(x1, y1, x2, y2, fill='green', outline='green', width=5)
+                self.vertices_ids = self.canvas.create_oval(x1, y1, x2, y2, fill='blue', outline='blue', width=5)
                 self.vertices_ids_array.append(self.vertices_ids)
 
-            numberofPoint=len(self.current_points)
-            if numberofPoint>2:
-                self.polygons_ids=self.canvas.create_polygon(self.current_points, fill='red', outline='red', width=2)
-                self.draw_line.polygon((self.current_points), fill='white', outline='white')
+            number_points=len(self.current_points)
+            if number_points>2:
+                self.polygons_ids=self.canvas.create_polygon(self.current_points, fill='red', outline='red', width=2, stipple=self.slider_opacity)
+                #self.draw_line.polygon((self.current_points), fill='white', outline='white')
+                self.features_polygons.extend([[self.count_feature, self.polygons_ids, ((self.lasx, self.lasy))]])
                 self.polygons_ids_array.append(self.polygons_ids)
+                #print(self.features_polygons)
 
-            elif numberofPoint==2 :
-                print('line')
+            elif number_points==2 :
                 self.canvas.create_line(self.current_points)
 
-            self.save_draw_array = np.asarray(self.draw_img)
-            self.img_poly= PIL.Image.fromarray(self.save_draw_array)
-           # self.img_poly = self.img_array_tk + self.img_poly 
-
-            self.img_poly = ImageTk.PhotoImage(self.img_poly)
-            self.canvas.itemconfig(self.img_canvas_id, image = self.image_tk)
-            self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
             self.bool_draw = True
 
     def draw_smth(self, event):
@@ -989,7 +1008,7 @@ class Interface(tk.Frame):
             
             clicks_ids = [[self.line_obj, self.lasx, self.lasy]]
             self.draw_lines_array.extend(clicks_ids)
-            print(self.draw_lines_array)
+            #print(self.draw_lines_array)
 
         else:
             self.lasx, self.lasy = event.x, event.y
@@ -997,23 +1016,24 @@ class Interface(tk.Frame):
                 if  self.lasx - self.slider_pencil <= self.draw_lines_array[:][i][1] and self.lasx + self.slider_pencil > self.draw_lines_array[:][i][1] and \
                     self.lasy - self.slider_pencil <= self.draw_lines_array[:][i][2] and self.lasy + self.slider_pencil > self.draw_lines_array[:][i][2]:
                     
-                    self.canvas.delete(self.draw_lines_array[:][i][0])
-                    self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
-                    Offset = (int(self.slider_pencil))/2
-                    self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
+                    try:
+                        self.canvas.delete(self.draw_lines_array[:][i][0])
+                        self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
+                        Offset = (int(self.slider_pencil))/2
+                        self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
+                   
+                    except:
+                        pass
 
-            for i in range(1, len(self.polygons_ids_array), 1):
-                if  self.lasx - self.slider_pencil <= self.draw_lines_array[:][i][1] and self.lasx + self.slider_pencil > self.draw_lines_array[:][i][1] and \
-                    self.lasy - self.slider_pencil <= self.draw_lines_array[:][i][2] and self.lasy + self.slider_pencil > self.draw_lines_array[:][i][2]:
-                    
-                    self.canvas.delete(self.draw_lines_array[:][i][0])
-                    self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
-                    Offset = (int(self.slider_pencil))/2
-                    self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
+            for i in range(1, len(self.features_polygons), 1):
+                #print('valor poly : ', self.features_polygons, self.features_polygons[i], end='\n')
+                if  self.lasx - self.slider_pencil <= self.features_polygons[i][2][0] and self.lasx + self.slider_pencil > self.features_polygons[i][2][0] and \
+                    self.lasy - self.slider_pencil <= self.features_polygons[i][2][1] and self.lasy + self.slider_pencil > self.features_polygons[i][2][1]:
+                    self.canvas.delete(self.features_polygons[:][i][1])
+                    self.features_polygons.pop(i)
 
-
-        self.save_draw_array = np.asarray(self.draw_img)
-        self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
+        #self.save_draw_array = np.asarray(self.draw_img)
+        #self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
         self.bool_draw = True
         
 
