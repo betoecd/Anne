@@ -1,3 +1,4 @@
+from tkinter.constants import SOLID
 import numpy as np
 import os
 import pathlib
@@ -48,14 +49,19 @@ class Interface(tk.Frame):
         self.cnt_validator = []
         self.background_percent = 0.8
         self.array_clicks = []
+        self.current_points = []
         self.draw_lines_array = [[]]
+        self.polygons_ids_array = []
+        self.vertices_ids_array = []
+
         self.save_draw_array = None
         self.name_tif = ''
         self.name_reference_binary = ''
         self.name_reference_neural = ''
         self.slider_pencil = 10
         self.slider_opacity = 5
-        self.option_draw = True
+        self.pencil_draw = True
+        self.polygon_draw = False
         self.opacity = False
         self.bool_draw = False
         self.path_save_img_rgb = 'dataset/rgb'
@@ -225,6 +231,12 @@ class Interface(tk.Frame):
         self.pencil_btn.place(relx=0.132, rely=0.82, height=40, width=40)
         self.pencil_btn.bind("<Button-1>", partial(self.get_btn, key='6'))
 
+        self.polygon_icon = PhotoImage(file = r"icons/polygon.png")
+        self.polygon_icon =  self.polygon_icon.subsample(1, 1)
+        self.polygon_btn = tk.Button(root, image = self.polygon_icon)
+        self.polygon_btn.place(relx=0.176, rely=0.82, height=40, width=40)
+        self.polygon_btn.bind("<Button-1>", partial(self.get_btn, key='9'))
+
         self.transp_icon = PhotoImage(file = r"icons/transparency.png")
         self.transp_icon =  self.transp_icon.subsample(2, 2)
         self.transparency_btn = tk.Button(root, image=self.transp_icon)
@@ -234,7 +246,7 @@ class Interface(tk.Frame):
         self.erase_icon = PhotoImage(file = r"icons/erase.png")
         self.erase_icon =  self.erase_icon.subsample(1, 1)
         self.erase_btn = tk.Button(root, image=self.erase_icon)
-        self.erase_btn.place(relx=0.180, rely=0.82, height=40, width=40)
+        self.erase_btn.place(relx=0.222, rely=0.82, height=40, width=40)
         self.erase_btn.bind("<Button-1>", partial(self.get_btn, key='7'))
 
         self.percent_txt = tk.Label(root, text = '',  font=('Helvetica', 18), fg='black')
@@ -544,11 +556,18 @@ class Interface(tk.Frame):
             self.name_reference_binary = self.load_shp(1)[1]
 
         elif key=='6':
-            self.option_draw = True
+            self.pencil_draw = True
+            self.polygon_draw = False
             self.opacity = False
 
         elif key=='7':
-            self.option_draw = False
+            self.pencil_draw = False
+            self.polygon_draw = False
+            self.opacity = False
+        
+        elif key=='9':
+            self.pencil_draw = False
+            self.polygon_draw = True
             self.opacity = False
 
         elif key=='8':
@@ -597,7 +616,7 @@ class Interface(tk.Frame):
             self.daninha_1 = gdal.Open(self.reference_binary)
             self.daninha_band_1 =  self.daninha_1.GetRasterBand(1)
 
-            self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
+            self.draw_img = PIL.Image.new("RGBA",(self.screen_width, self.screen_height),(0,0,0,0))
             self.draw_line = ImageDraw.Draw(self.draw_img)
             self.cnt_validator = []   
 
@@ -787,10 +806,23 @@ class Interface(tk.Frame):
             print(len(self.draw_lines_array))
             for i in range(0, len(self.draw_lines_array), 1):
                 try:
-                    print(self.draw_lines_array[i][0])
+                    #print(self.draw_lines_array[i][0])
                     self.canvas.delete(self.draw_lines_array[i][0])
                 except:
                     print('problema no id  :', i)
+
+            for i in range(0, len(self.polygons_ids_array), 1):
+                try:
+                    self.canvas.delete(self.polygons_ids_array[i])
+                except:
+                    print('problema no id  :', i)
+            
+            for i in range(0, len(self.vertices_ids_array), 1):
+                try:
+                    self.canvas.delete(self.vertices_ids_array[i])
+                except:
+                    print('problema no id  :', i)
+
 
             self.canvas.delete(self.img_canvas_id)
             cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
@@ -799,7 +831,7 @@ class Interface(tk.Frame):
             self.dst_img.FlushCache()
             self.bool_draw = False
         
-            self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
+            self.draw_img = PIL.Image.new("RGBA",(self.screen_width, self.screen_height),(0,0,0,0))
             self.draw_line = ImageDraw.Draw(self.draw_img)
             self.cnt_validator = []
             #self.canvas.delete(self.line_obj)
@@ -895,25 +927,55 @@ class Interface(tk.Frame):
         self.imgparcela = cv2.merge((blueparcela, greenparcela, redparcela))
         self.imgparcela[self.daninha_parcela == 0] = 0
 
-        img = cv2.resize(self.imgparcela, (self.screen_width, self.screen_height))
-        img = PIL.Image.fromarray(img)
-        self.image_tk = ImageTk.PhotoImage(img)
+        self.img_array_tk = cv2.resize(self.imgparcela, (self.screen_width, self.screen_height))
+        self.img_array_tk = PIL.Image.fromarray(self.img_array_tk)
+        self.image_tk = ImageTk.PhotoImage(self.img_array_tk)
         self.first_click = True
         self.canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
         self.img_canvas_id = self.canvas.create_image(self.screen_width// 2, self.screen_height // 2, image=self.image_tk, anchor=tk.CENTER)
         self.canvas.config(scrollregion=self.canvas.bbox(tk.ALL))
 
         self.canvas.bind("<Button-1>",  self.get_x_and_y)
+        self.canvas.bind("<Button 3>", self.right_click)
         self.canvas.bind("<B1-Motion>", self.draw_smth)
         #cv2.countNonZero(self.save_draw_array)
           
+    def right_click(self, event):
+        self.current_points.clear()
+    
     def get_x_and_y(self, event):
         self.lasx, self.lasy = event.x, event.y
-        #self.array_clicks.append(lasx)
-        #self.array_clicks.append(lasy)
+        if(self.polygon_draw):            
+            self.current_points.append(self.lasx, self.lasy)
+
+            for pt in self.current_points:
+                x, y =  pt
+                x1, y1 = (x - 1), (y - 1)
+                x2, y2 = (x + 1), (y + 1)
+                self.vertices_ids = self.canvas.create_oval(x1, y1, x2, y2, fill='green', outline='green', width=5)
+                self.vertices_ids_array.append(self.vertices_ids)
+
+            numberofPoint=len(self.current_points)
+            if numberofPoint>2:
+                self.polygons_ids=self.canvas.create_polygon(self.current_points, fill='red', outline='red', width=2)
+                self.draw_line.polygon((self.current_points), fill='white', outline='white')
+                self.polygons_ids_array.append(self.polygons_ids)
+
+            elif numberofPoint==2 :
+                print('line')
+                self.canvas.create_line(self.current_points)
+
+            self.save_draw_array = np.asarray(self.draw_img)
+            self.img_poly= PIL.Image.fromarray(self.save_draw_array)
+           # self.img_poly = self.img_array_tk + self.img_poly 
+
+            self.img_poly = ImageTk.PhotoImage(self.img_poly)
+            self.canvas.itemconfig(self.img_canvas_id, image = self.image_tk)
+            self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
+            self.bool_draw = True
 
     def draw_smth(self, event):
-        if(self.option_draw):
+        if(self.pencil_draw):
             self.lasx, self.lasy = event.x, event.y
             self.line_obj = self.canvas.create_line((self.lasx, self.lasy, event.x, event.y), 
                                     fill='red', capstyle=tk.ROUND, 
@@ -940,9 +1002,20 @@ class Interface(tk.Frame):
                     Offset = (int(self.slider_pencil))/2
                     self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
 
+            for i in range(1, len(self.polygons_ids_array), 1):
+                if  self.lasx - self.slider_pencil <= self.draw_lines_array[:][i][1] and self.lasx + self.slider_pencil > self.draw_lines_array[:][i][1] and \
+                    self.lasy - self.slider_pencil <= self.draw_lines_array[:][i][2] and self.lasy + self.slider_pencil > self.draw_lines_array[:][i][2]:
+                    
+                    self.canvas.delete(self.draw_lines_array[:][i][0])
+                    self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (0,0,0), width=int(self.slider_pencil), joint='curve')
+                    Offset = (int(self.slider_pencil))/2
+                    self.draw_line.ellipse((self.lasx-Offset,self.lasy-Offset,self.lasx+Offset,self.lasy+Offset), (0,0,0))
+
+
         self.save_draw_array = np.asarray(self.draw_img)
         self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
         self.bool_draw = True
+        
 
     def printcoords(self, event):
 
@@ -1118,6 +1191,7 @@ class Interface(tk.Frame):
                 self.dst_img.self.dst_img.FlushCache()
 
     def generate_shape(self):
+        
         src_band = self.dst_img.GetRasterBand(1)
         dst_layername = 'daninhas'
         drv = ogr.GetDriverByName("ESRI Shapefile")
@@ -1139,12 +1213,10 @@ class Interface(tk.Frame):
             self.y_crop = float(values[1])
             self.directory_saved = str(values[2])
 
-            #print('x', self.x_crop, 'y', self.y_crop, 'dir:', self.directory_saved)
             bool_check_dir = True
             f.close()
 
         except:
-            #print('Nao abriu')
             f = open('log_progress.txt','x', encoding="utf-8")
             bool_check_dir = False
             f.close()
