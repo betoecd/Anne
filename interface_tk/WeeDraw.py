@@ -828,10 +828,11 @@ class Interface(tk.Frame):
                 except:
                     print('problema no id  :', i)
 
-            for i in range(0, len(self.features_polygons), 1):   
+            for i in range(0, len(self.features_polygons)+1, 1):    
+                data_polygons.append((self.current_points_bkp[i]))
+                print(i, len(self.features_polygons))
                 try: 
                     #if self.features_polygons[i][0] == self.features_polygons[i+1][0]:
-                    data_polygons.append((self.current_points_bkp[i]))
                     print('poligono id : ', self.features_polygons[i][0], self.features_polygons[i+1][0])
                     print('data', data_polygons)
                     print('features', self.features_polygons)
@@ -839,30 +840,21 @@ class Interface(tk.Frame):
                         if (self.features_polygons[i][0]) == self.features_polygons[i+1][0]:
                             self.draw_line.polygon((data_polygons), fill='white', outline='white')
                             print('data no if : ', data_polygons)
-                        
+
                         elif (self.features_polygons[i][0]) != self.features_polygons[i+1][0]:
                             self.draw_line.polygon((data_polygons), fill='white', outline='white')
                             print('data no else :', data_polygons)
                             data_polygons.clear()
-                        
-                    print(i, len(self.features_polygons))
-                    """
-                    if (i == (len(self.features_polygons))-1):
-                        print('Ultimo Elemento do array : ')
-                        data_polygons.append((self.current_points_bkp[i]))
-                        print('ultimo data', data_polygons)
-                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                    """
-                    #else:
-                    #    data_polygons.append((self.current_points_bkp[i]))
-                    #    self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                    #    data_polygons.clear()
-    #
+
                 except:
                     pass
-                print(data_polygons)
-                self.save_draw_array = np.asarray(self.draw_img)
-                self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
+
+                if(i == len(self.features_polygons)):
+                        print('Ultimo Elemento:')
+                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                            
+            self.save_draw_array = np.asarray(self.draw_img)
+            self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
 
             self.canvas.delete(self.img_canvas_id)
             cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
@@ -873,7 +865,8 @@ class Interface(tk.Frame):
         
             self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
             self.draw_line = ImageDraw.Draw(self.draw_img)
-            self.current_points_bkp.clear
+            self.current_points_bkp.clear()
+            self.current_points.clear()
             self.cnt_validator = []
             #self.canvas.delete(self.line_obj)
 
