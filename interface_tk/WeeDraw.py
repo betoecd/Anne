@@ -51,6 +51,7 @@ class Interface(tk.Frame):
         self.background_percent = 0.8
         self.array_clicks = []
         self.current_points = []
+        self.current_points_bkp = []
         self.draw_lines_array = [[]]
         self.features_polygons = [[]]
         self.polygons_ids_array = []
@@ -828,19 +829,19 @@ class Interface(tk.Frame):
                     print('problema no id  :', i)
 
             for i in range(0, len(self.features_polygons), 1):   
-                try:    
-                    '''         
+                try: 
                     if self.features_polygons[i][0] == self.features_polygons[i+1][0]:
-                        data_polygons.append((self.features_polygons[i][2][0], self.features_polygons[i][2][1]))
-                        #self.draw_line.polygon((data_polygons), fill='white', outline='white')
-    
-                    else:
+                        data_polygons.append((self.current_points_bkp[i]))
+                        print('data', data_polygons)
+                        print('features', self.features_polygons)
                         self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                        #print('no else', (self.features_polygons[i][2], self.features_polygons[i+1][2]))
+                        #data_polygons.clear()
+                    
+                    else:
+                        data_polygons.append((self.current_points_bkp[i]))
+                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
                         data_polygons.clear()
-                    '''
-                    data_polygons.append((self.features_polygons[i][2][0], self.features_polygons[i][2][1]))
-                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
+    
                 except:
                     pass
                 print(data_polygons)
@@ -972,7 +973,8 @@ class Interface(tk.Frame):
         self.lasx, self.lasy = event.x, event.y
         if(self.polygon_draw):            
             self.current_points.append((self.lasx, self.lasy))
-            print(self.current_points)
+            self.current_points_bkp.append((self.lasx, self.lasy))
+            print(  )
             for pt in self.current_points:
                 x, y =  pt
                 x1, y1 = (x - 1), (y - 1)
@@ -1010,7 +1012,7 @@ class Interface(tk.Frame):
             self.draw_lines_array.extend(clicks_ids)
             #print(self.draw_lines_array)
 
-        else:
+        elif(not self.pencil_draw and not self.polygon_draw):
             self.lasx, self.lasy = event.x, event.y
             for i in range(1, len(self.draw_lines_array[:][:]), 1):
                 if  self.lasx - self.slider_pencil <= self.draw_lines_array[:][i][1] and self.lasx + self.slider_pencil > self.draw_lines_array[:][i][1] and \
