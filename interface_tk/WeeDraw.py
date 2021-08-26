@@ -828,31 +828,26 @@ class Interface(tk.Frame):
                 except:
                     print('problema no id  :', i)
 
-            for i in range(0, len(self.features_polygons)+1, 1):    
-                data_polygons.append((self.current_points_bkp[i]))
+            for i in range(1, len(self.features_polygons)-1, 1):    
+                if (self.features_polygons[i-1] == []):
+                    continue
+                data_polygons.append((self.features_polygons[i][2]))
                 print(i, len(self.features_polygons))
-                try: 
-                    #if self.features_polygons[i][0] == self.features_polygons[i+1][0]:
-                    print('poligono id : ', self.features_polygons[i][0], self.features_polygons[i+1][0])
-                    print('data', data_polygons)
-                    print('features', self.features_polygons)
-                    if len(data_polygons) > 2:
-                        if (self.features_polygons[i][0]) == self.features_polygons[i+1][0]:
-                            self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                            print('data no if : ', data_polygons)
 
-                        elif (self.features_polygons[i][0]) != self.features_polygons[i+1][0]:
-                            self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                            print('data no else :', data_polygons)
-                            data_polygons.clear()
+                if (self.features_polygons[i+1][0] != self.features_polygons[i][0]):
+                    print(data_polygons)
+                    print('-----------------------------------------------------')
+                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                    data_polygons.clear()
 
-                except:
-                    pass
+                if (i+3) == len(self.features_polygons):
+                    print('Ultimo :')
+                    data_polygons.append(self.features_polygons[i+1][2])
+                    data_polygons.append(self.features_polygons[i+2][2])
+                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                    print(data_polygons)
+                    data_polygons.clear()
 
-                if(i == len(self.features_polygons)):
-                        print('Ultimo Elemento:')
-                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                            
             self.save_draw_array = np.asarray(self.draw_img)
             self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
 
@@ -1004,6 +999,11 @@ class Interface(tk.Frame):
                 self.polygons_ids= self.canvas.create_line(self.current_points)
                 self.features_polygons.extend([[self.count_feature, self.polygons_ids, ((self.lasx, self.lasy))]])  
                 self.polygons_ids_array.append(self.polygons_ids)
+
+            elif number_points<2:
+                #self.polygons_ids= self.canvas.create_line(self.current_points)
+                self.features_polygons.extend([[self.count_feature, self.vertices_ids_array, ((self.lasx, self.lasy))]])  
+                self.polygons_ids_array.append(self.vertices_ids_array)
 
             self.bool_draw = True
 
