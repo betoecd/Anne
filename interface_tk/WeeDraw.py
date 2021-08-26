@@ -864,6 +864,8 @@ class Interface(tk.Frame):
             self.draw_line = ImageDraw.Draw(self.draw_img)
             self.current_points_bkp.clear()
             self.current_points.clear()
+            self.canvas.delete('oval')
+            self.canvas.delete('line')
             self.cnt_validator = []
             #self.canvas.delete(self.line_obj)
 
@@ -986,19 +988,19 @@ class Interface(tk.Frame):
                 x, y =  pt
                 x1, y1 = (x - 1), (y - 1)
                 x2, y2 = (x + 1), (y + 1)
-                self.vertices_ids = self.canvas.create_oval(x1, y1, x2, y2, fill='blue', outline='blue', width=5)
+                self.vertices_ids = self.canvas.create_oval(x1, y1, x2, y2, fill='blue', outline='blue', width=3, tags='oval')
                 self.vertices_ids_array.append(self.vertices_ids)
 
             number_points=len(self.current_points)
             if number_points>2:
-                self.polygons_ids=self.canvas.create_polygon(self.current_points, fill='red', outline='red', width=2, stipple=self.slider_opacity)
+                self.polygons_ids=self.canvas.create_polygon(self.current_points, fill='red', outline='', width=2, stipple=self.slider_opacity, tags='poly')
                 #self.draw_line.polygon((self.current_points), fill='white', outline='white')
                 self.features_polygons.extend([[self.count_feature, self.polygons_ids, ((self.lasx, self.lasy))]])
                 self.polygons_ids_array.append(self.polygons_ids)
                 #print(self.features_polygons)
 
             elif number_points==2 :
-                self.polygons_ids= self.canvas.create_line(self.current_points)
+                self.polygons_ids= self.canvas.create_line(self.current_points, fill='', tags='line')
                 self.features_polygons.extend([[self.count_feature, self.polygons_ids, ((self.lasx, self.lasy))]])  
                 self.polygons_ids_array.append(self.polygons_ids)
 
@@ -1043,11 +1045,14 @@ class Interface(tk.Frame):
 
             for i in range(1, len(self.features_polygons), 1):
                 #print('valor poly : ', self.features_polygons, self.features_polygons[i], end='\n')
-                if  self.lasx - self.slider_pencil <= self.features_polygons[i][2][0] and self.lasx + self.slider_pencil > self.features_polygons[i][2][0] and \
-                    self.lasy - self.slider_pencil <= self.features_polygons[i][2][1] and self.lasy + self.slider_pencil > self.features_polygons[i][2][1]:
-                    self.canvas.delete(self.features_polygons[:][i][1])
+                if  self.lasx - 5 <= self.features_polygons[i][2][0] and self.lasx + 5 > self.features_polygons[i][2][0] and \
+                    self.lasy - 5 <= self.features_polygons[i][2][1] and self.lasy + 5 > self.features_polygons[i][2][1]:
+                    self.canvas.coords(self.features_polygons[i][1], 256,256)
+                    self.canvas.delete('oval')
+                    self.canvas.delete('line')
                     self.features_polygons.pop(i)
-
+            self.canvas.update()
+            self.canvas.update_idletasks() 
         #self.save_draw_array = np.asarray(self.draw_img)
         #self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
         self.bool_draw = True
