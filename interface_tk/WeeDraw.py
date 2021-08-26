@@ -828,11 +828,13 @@ class Interface(tk.Frame):
                 except:
                     print('problema no id  :', i)
 
-            for i in range(1, len(self.features_polygons)-1, 1):    
-                if (self.features_polygons[i-1] == []):
+            for i in range(0, len(self.features_polygons)-1, 1):    
+                if (self.features_polygons[i]   == []):
                     continue
                 data_polygons.append((self.features_polygons[i][2]))
                 print(i, len(self.features_polygons))
+                print('Features : ', self.features_polygons)
+                print('Features Array : ', self.features_polygons[i][2])
 
                 if (self.features_polygons[i+1][0] != self.features_polygons[i][0]):
                     print(data_polygons)
@@ -1002,7 +1004,7 @@ class Interface(tk.Frame):
 
             elif number_points<2:
                 #self.polygons_ids= self.canvas.create_line(self.current_points)
-                self.features_polygons.extend([[self.count_feature, self.vertices_ids_array, ((self.lasx, self.lasy))]])  
+                self.features_polygons.extend([[self.count_feature, 1, ((self.lasx, self.lasy))]])  
                 self.polygons_ids_array.append(self.vertices_ids_array)
 
             self.bool_draw = True
