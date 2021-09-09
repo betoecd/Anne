@@ -1,10 +1,10 @@
-from tkinter.constants import SOLID
 import numpy as np
 import os
 import pathlib
 import PIL
 import cv2
 import sys
+
 try:
 
     import Tkinter as tk
@@ -18,6 +18,7 @@ except ImportError:
     import tkinter.ttk as ttk
     py3 = True
     import shutil
+
 from typing import Text
 from functools import partial
 from tkinter import PhotoImage, messagebox as mbox
@@ -89,7 +90,7 @@ class Interface(tk.Frame):
 
         self.var = tk.IntVar()
         self.old_choose = '' 
-        self.OptionList = ["Comparar Resultados", "Comparar por Diretorios" ,"Efetuar Marcacoes"] 
+        self.OptionList = ["Efetuar Marcacoes"] 
 
         img = ImageTk.PhotoImage(file='icons/icone_sensix.png')
         root.call('wm', 'iconphoto', root._w, img)
@@ -264,7 +265,7 @@ class Interface(tk.Frame):
         self.opt.destroy()
 
         self.label1 = tk.Label(root)
-        self.label1.place(relx=0.085, rely=0.52, height=21, width=200)
+        self.label1.place(relx=0.090, rely=0.52, height=21, width=200)
         self.label1.configure(activebackground="#f9f9f9")
         self.label1.configure(text='Selecione o Mosaico :')
 
@@ -480,7 +481,7 @@ class Interface(tk.Frame):
         else:
             self.count_img += -1
 
-        print(self.name_dir[self.count_img])
+        #print(self.name_dir[self.count_img])
         
         self.img_rgb = cv2.imread(self.diretorio_rgb + self.name_dir[self.count_img], 1)
         self.img_neural = cv2.imread(self.diretorio_pred + self.name_dir[self.count_img], 1)
@@ -577,7 +578,7 @@ class Interface(tk.Frame):
             self.opacity = not self.opacity
             if self.opacity:
                 option_img = 'normal'
-                print('No if')
+                #print('No if')
                 self.canvas.tag_lower(self.img_canvas_id)
                 self.canvas.update()
             else:
@@ -761,7 +762,7 @@ class Interface(tk.Frame):
             self.diretorio_true = "../../daninhas/ortomosaicos/pre-emergente/190837/marcacoes_manuais/"
             self.diretorio_pred = "../../daninhas/ortomosaicos/pre-emergente/190837/resultados_rede_manuais/"
 
-            print(self.diretorio_rgb, self.diretorio_true, self.diretorio_pred)
+            #(self.diretorio_rgb, self.diretorio_true, self.diretorio_pred)
             self.name_dir = os.listdir(self.diretorio_rgb)
             frame = tk.Frame(root, bd=2, relief=tk.SUNKEN)
             frame.grid_rowconfigure(0, weight=1)
@@ -808,47 +809,31 @@ class Interface(tk.Frame):
         if (self.bool_draw):
             self.count_feature = 0
             data_polygons = []
-            print(len(self.draw_lines_array))
-            for i in range(0, len(self.draw_lines_array), 1):
+
+            for i in range(0, len(self.features_polygons)-1, 1):
                 try:
-                    #print(self.draw_lines_array[i][0])
-                    self.canvas.delete(self.draw_lines_array[i][0])
+                    if (self.features_polygons[i]   == []):
+                        continue
+                    data_polygons.append((self.features_polygons[i][2]))
+                    #print(i, len(self.features_polygons))
+                    #print('Features : ', self.features_polygons)
+                    #print('Features Array : ', self.features_polygons[i][2])
+
+                    if (self.features_polygons[i+1][0] != self.features_polygons[i][0]):
+                        #print(data_polygons)
+                        #print('-----------------------------------------------------')
+                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                        data_polygons.clear()
+
+                    if (i+3) == len(self.features_polygons):
+                        #print('Ultimo :')
+                        data_polygons.append(self.features_polygons[i+1][2])
+                        data_polygons.append(self.features_polygons[i+2][2])
+                        self.draw_line.polygon((data_polygons), fill='white', outline='white')
+                        #print(data_polygons)
+                        data_polygons.clear()
                 except:
-                    print('problema no id  :', i)
-
-            for i in range(0, len(self.polygons_ids_array), 1):
-                try:
-                    self.canvas.delete(self.polygons_ids_array[i])
-                except:
-                    print('problema no id  :', i)
-            
-            for i in range(0, len(self.vertices_ids_array), 1):
-                try:
-                    self.canvas.delete(self.vertices_ids_array[i])
-                except:
-                    print('problema no id  :', i)
-
-            for i in range(0, len(self.features_polygons)-1, 1):    
-                if (self.features_polygons[i]   == []):
-                    continue
-                data_polygons.append((self.features_polygons[i][2]))
-                print(i, len(self.features_polygons))
-                print('Features : ', self.features_polygons)
-                print('Features Array : ', self.features_polygons[i][2])
-
-                if (self.features_polygons[i+1][0] != self.features_polygons[i][0]):
-                    print(data_polygons)
-                    print('-----------------------------------------------------')
-                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                    data_polygons.clear()
-
-                if (i+3) == len(self.features_polygons):
-                    print('Ultimo :')
-                    data_polygons.append(self.features_polygons[i+1][2])
-                    data_polygons.append(self.features_polygons[i+2][2])
-                    self.draw_line.polygon((data_polygons), fill='white', outline='white')
-                    print(data_polygons)
-                    data_polygons.clear()
+                    pass
 
             self.save_draw_array = np.asarray(self.draw_img)
             self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
@@ -866,12 +851,18 @@ class Interface(tk.Frame):
             self.current_points.clear()
             self.canvas.delete('oval')
             self.canvas.delete('line')
+            self.canvas.delete('simple_line')
+            self.canvas.delete('poly')
             self.cnt_validator = []
             #self.canvas.delete(self.line_obj)
 
             self.draw_lines_array.clear()
             self.features_polygons.clear()
-            self.canvas.update()
+            
+            del self.draw_lines_array
+            del self.features_polygons
+            self.draw_lines_array = []
+            self.features_polygons = [[]]
 
         if (key == "1"):
             if (self.x_crop + self.iterator_x < self.mosaico.RasterXSize and self.x_crop + self.iterator_x > 0):
@@ -983,7 +974,7 @@ class Interface(tk.Frame):
         if(self.polygon_draw):            
             self.current_points.append((self.lasx, self.lasy))
             self.current_points_bkp.append((self.lasx, self.lasy))
-            print(self.current_points)
+            #print(self.current_points)
             for pt in self.current_points:
                 x, y =  pt
                 x1, y1 = (x - 1), (y - 1)
@@ -1000,7 +991,7 @@ class Interface(tk.Frame):
                 #print(self.features_polygons)
 
             elif number_points==2 :
-                self.polygons_ids= self.canvas.create_line(self.current_points, fill='', tags='line')
+                self.polygons_ids= self.canvas.create_line(self.current_points, fill='', tags='simple_line')
                 self.features_polygons.extend([[self.count_feature, self.polygons_ids, ((self.lasx, self.lasy))]])  
                 self.polygons_ids_array.append(self.polygons_ids)
 
@@ -1018,7 +1009,7 @@ class Interface(tk.Frame):
                                     fill='red', capstyle=tk.ROUND, 
                                     joinstyle=tk.ROUND, width=int(self.slider_pencil),
                                     smooth=True, splinesteps=12,
-                                    dash=(3,5), stipple=self.slider_opacity)
+                                    dash=(3,5), stipple=self.slider_opacity, tags='line')
             
             self.draw_line.line((self.lasx, self.lasy, event.x, event.y), (255,255,255), width=int(self.slider_pencil), joint='curve')
             Offset = (int(self.slider_pencil))/2
@@ -1045,18 +1036,17 @@ class Interface(tk.Frame):
 
             for i in range(1, len(self.features_polygons), 1):
                 #print('valor poly : ', self.features_polygons, self.features_polygons[i], end='\n')
-                if  self.lasx - 5 <= self.features_polygons[i][2][0] and self.lasx + 5 > self.features_polygons[i][2][0] and \
-                    self.lasy - 5 <= self.features_polygons[i][2][1] and self.lasy + 5 > self.features_polygons[i][2][1]:
-                    self.canvas.coords(self.features_polygons[i][1], 256,256)
+                if  self.lasx - 10 <= self.features_polygons[i][2][0] and self.lasx + 10 > self.features_polygons[i][2][0] and \
+                    self.lasy - 10 <= self.features_polygons[i][2][1] and self.lasy + 10 > self.features_polygons[i][2][1]:
+                    self.canvas.delete(self.features_polygons[i][1])
                     self.canvas.delete('oval')
-                    self.canvas.delete('line')
-                    self.features_polygons.pop(i)
-            self.canvas.update()
-            self.canvas.update_idletasks() 
+                    self.canvas.delete('simple_line')
+                    self.canvas.delete(self.features_polygons[i][0])
+                    self.features_polygons.pop(i) 
         #self.save_draw_array = np.asarray(self.draw_img)
         #self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
         self.bool_draw = True
-        
+
 
     def printcoords(self, event):
 
@@ -1068,7 +1058,7 @@ class Interface(tk.Frame):
                 self.cnt_validator.append(False)
                 self.img_fit = cv2.fillPoly(self.dif, pts=self.contours, color=(0,0,0))
             
-            print("False")
+            #print("False")
             self.first_click = False
 
         for i in range(0, len(self.cnt_validator)):   
@@ -1076,7 +1066,7 @@ class Interface(tk.Frame):
             #print(r)
             if r > 0:
                 self.cnt_validator[i] = (not self.cnt_validator[i])    
-                print("Selected contour ", i)   
+                #print("Selected contour ", i)   
                 self.ctn = self.contours[i]
 
                 if self.cnt_validator[i] == True:
@@ -1090,7 +1080,7 @@ class Interface(tk.Frame):
                     self.draw = cv2.drawContours(self.img_rgb, self.ctn, -1, (255, 0, 0), 3)
                     self.img_fit = cv2.fillPoly(self.dif, pts=[self.ctn], color=(0,0,0))
 
-        print('validator :', self.cnt_validator)
+        #print('validator :', self.cnt_validator)
         img = PIL.Image.fromarray(self.draw)
         self.image_tk = ImageTk.PhotoImage(img)
 
@@ -1263,10 +1253,9 @@ class Interface(tk.Frame):
             f.close()
         return(bool_check_dir)
 
-
     def destroy_aplication(self):
 
-        if (self.x_crop != 0 and self.y_crop != 0):
+        if (self.x_crop >= 0 and self.y_crop >= 0):
             string_text = str(self.x_crop) + ',' + str(self.y_crop) + ',' + str(self.name_tif) + ', \n'
             with open("log_progress.txt", "ab") as f:
                 f.write(string_text.encode('utf-8', 'ignore'))
