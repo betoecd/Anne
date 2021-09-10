@@ -70,6 +70,7 @@ class Interface(tk.Frame):
         self.bool_draw = False
         self.path_save_img_rgb = 'dataset/rgb'
         self.path_save_img_bin = 'dataset/binario'
+        self.path_save_img_negative = 'dataset/negativos'
         self.directory_saved = ''
         root.maxsize(self.width_size, self.hight_size) 
         root.resizable(False,False)
@@ -796,6 +797,9 @@ class Interface(tk.Frame):
             if not os.path.isdir(self.path_save_img_bin):
                 os.makedirs(self.path_save_img_bin, exist_ok=True)
 
+            if not os.path.isdir(self.path_save_img_negative):
+                os.makedirs(self.path_save_img_negative, exist_ok=True)
+
             self.labelling_menu()
 
         self.old_choose = self.variable.get()
@@ -815,18 +819,12 @@ class Interface(tk.Frame):
                     if (self.features_polygons[i]   == []):
                         continue
                     data_polygons.append((self.features_polygons[i][2]))
-                    #print(i, len(self.features_polygons))
-                    #print('Features : ', self.features_polygons)
-                    #print('Features Array : ', self.features_polygons[i][2])
 
                     if (self.features_polygons[i+1][0] != self.features_polygons[i][0]):
-                        #print(data_polygons)
-                        #print('-----------------------------------------------------')
                         self.draw_line.polygon((data_polygons), fill='white', outline='white')
                         data_polygons.clear()
 
                     if (i+3) == len(self.features_polygons):
-                        #print('Ultimo :')
                         data_polygons.append(self.features_polygons[i+1][2])
                         data_polygons.append(self.features_polygons[i+2][2])
                         self.draw_line.polygon((data_polygons), fill='white', outline='white')
@@ -838,26 +836,30 @@ class Interface(tk.Frame):
             self.save_draw_array = np.asarray(self.draw_img)
             self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
 
-            self.canvas.delete(self.img_canvas_id)
-            cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
-            cv2.imwrite(self.path_save_img_bin + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.save_draw_array)
-            self.dst_img.GetRasterBand(1).WriteArray(self.save_draw_array, xoff=self.x_crop, yoff=self.y_crop)
-            self.dst_img.FlushCache()
-            self.bool_draw = False
-        
-            self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
-            self.draw_line = ImageDraw.Draw(self.draw_img)
-            self.current_points_bkp.clear()
-            self.current_points.clear()
-            self.canvas.delete('oval')
-            self.canvas.delete('line')
-            self.canvas.delete('simple_line')
-            self.canvas.delete('poly')
-            self.cnt_validator = []
-            #self.canvas.delete(self.line_obj)
+            if cv2.countNonZero(self.save_draw_array) == 0:
+                cv2.imwrite(self.path_save_img_negative + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
 
-            self.draw_lines_array.clear()
-            self.features_polygons.clear()
+            else:
+                self.canvas.delete(self.img_canvas_id)
+                cv2.imwrite(self.path_save_img_rgb + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.imgparcela)
+                cv2.imwrite(self.path_save_img_bin + '/daninha_{x}_{y}.png'.format(x=int(self.x_crop),y=int(self.y_crop)), self.save_draw_array)
+                self.dst_img.GetRasterBand(1).WriteArray(self.save_draw_array, xoff=self.x_crop, yoff=self.y_crop)
+                self.dst_img.FlushCache()
+                #self.bool_draw = False
+            
+                self.draw_img = PIL.Image.new("RGB",(self.screen_width, self.screen_height),(0,0,0))
+                self.draw_line = ImageDraw.Draw(self.draw_img)
+                self.current_points_bkp.clear()
+                self.current_points.clear()
+                self.canvas.delete('oval')
+                self.canvas.delete('line')
+                self.canvas.delete('simple_line')
+                self.canvas.delete('poly')
+                self.cnt_validator = []
+                #self.canvas.delete(self.line_obj)
+
+                self.draw_lines_array.clear()
+                self.features_polygons.clear()
             
             del self.draw_lines_array
             del self.features_polygons
@@ -1043,9 +1045,9 @@ class Interface(tk.Frame):
                     self.canvas.delete('simple_line')
                     self.canvas.delete(self.features_polygons[i][0])
                     self.features_polygons.pop(i) 
-        #self.save_draw_array = np.asarray(self.draw_img)
-        #self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
-        self.bool_draw = True
+            #self.save_draw_array = np.asarray(self.draw_img)
+            #self.save_draw_array = nf.prepare_array(self, self.save_draw_array, self.iterator_x, self.iterator_y)
+            self.bool_draw = True
 
 
     def printcoords(self, event):
