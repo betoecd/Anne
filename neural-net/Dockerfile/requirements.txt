@@ -1,0 +1,14 @@
+imgaug==0.2.9
+numpy==1.18.5 
+opencv-python 
+pandas 
+Pillow 
+imageio==2.5.0
+scipy==1.4.1 
+scikit-image 
+sklearn 
+tensorflow==2.2.0 
+kaggle 
+Keras==2.4.3 
+keras_segmentation 
+segmentation-models==1.0.1

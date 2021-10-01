@@ -1,0 +1,18 @@
+version: "3"
+
+volumes:  
+    datasets-volume:
+        driver: local
+
+    neural-network-volume:
+        driver: local
+
+services:
+    neural-network:
+        container_name: neural-net
+        build: './Dockerfile'
+        volumes:
+            - datasets-volume:/home/neural-net/datasets
+            - neural-network-volume:/home/neural-net/neural-networks
+        tty: true
+        
