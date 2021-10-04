@@ -6,7 +6,11 @@ volumes:
 
     neural-network-volume:
         driver: local
-
+    
+    scripts-volume:
+        driver: local
+       
+           
 services:
     neural-network:
         container_name: neural-net
@@ -14,5 +18,7 @@ services:
         volumes:
             - datasets-volume:/home/neural-net/datasets
             - neural-network-volume:/home/neural-net/neural-networks
-        tty: true
+            - scripts-volume:/home/neural-net/scripts
+        tty: true   
         
+
